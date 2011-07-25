@@ -1,0 +1,109 @@
+# ====================================================================
+#
+#      sqlite.cdl
+#
+#      SQLITE configuration data
+#
+# ====================================================================
+#####ECOSGPLCOPYRIGHTBEGIN####
+## -------------------------------------------
+## This file is part of eCos, the Embedded Configurable Operating System.
+## Copyright (C) 1998, 1999, 2000, 2001, 2002 Red Hat, Inc.
+##
+## eCos is free software; you can redistribute it and/or modify it under
+## the terms of the GNU General Public License as published by the Free
+## Software Foundation; either version 2 or (at your option) any later version.
+##
+## eCos is distributed in the hope that it will be useful, but WITHOUT ANY
+## WARRANTY; without even the implied warranty of MERCHANTABILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with eCos; if not, write to the Free Software Foundation, Inc.,
+## 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
+##
+## As a special exception, if other files instantiate templates or use macros
+## or inline functions from this file, or you compile this file and link it
+## with other works to produce a work based on this file, this file does not
+## by itself cause the resulting work to be covered by the GNU General Public
+## License. However the source code for this file must still be made available
+## in accordance with section (3) of the GNU General Public License.
+##
+## This exception does not invalidate any other reasons why a work based on
+## this file might be covered by the GNU General Public License.
+##
+## Alternative licenses for eCos may be arranged by contacting Red Hat, Inc.
+## at http://sources.redhat.com/ecos/ecos-license/
+## -------------------------------------------
+#####ECOSGPLCOPYRIGHTEND####
+# ====================================================================
+######DESCRIPTIONBEGIN####
+#
+# Author(s):      eak
+# Original data:  eak
+# Contributors:
+# Date:           2009-03-13
+#
+#####DESCRIPTIONEND####
+#
+# ====================================================================
+
+cdl_package CYGPKG_SQLITE {
+    display       "SQLITE"
+    requires      CYGPKG_POSIX
+    requires      CYGPKG_ISOINFRA
+    requires      CYGINT_ISO_STRERROR
+    requires      CYGINT_ISO_ERRNO
+    requires      CYGINT_ISO_ERRNO_CODES
+    requires      CYGINT_ISO_MALLOC
+    requires      CYGPKG_IO_FILEIO
+    description   "SQLITE (3.6.11)."
+    
+    compile                                             \
+          alter.c analyze.c attach.c auth.c backup.c bitvec.c btmutex.c btree.c build.c \
+          callback.c complete.c date.c delete.c \
+          expr.c fault.c func.c global.c hash.c insert.c journal.c legacy.c loadext.c \
+          main.c malloc.c mem0.c mem1.c mem2.c mem3.c mem5.c memjournal.c \
+          mutex_noop.c mutex_os2.c mutex_unix.c mutex_w32.c mutex.c \
+          opcodes.c os_os2.c os_unix.c os_win.c os.c \
+          pager.c parse.c pcache.c pcache1.c pragma.c prepare.c printf.c random.c \
+          resolve.c rowset.c select.c status.c table.c tokenize.c trigger.c \
+          update.c utf.c util.c vacuum.c \
+          vdbe.c vdbeapi.c vdbeaux.c vdbeblob.c vdbemem.c \
+          vtab.c walker.c where.c
+
+    cdl_component CYGPKG_SQLITE_OPTIONS {
+        display "Build options"
+        flavor  none
+        no_define
+        description   "
+	    Package specific build options including control over
+	    compiler flags used only in building this package,
+	    and details of which tests are built."
+
+
+        cdl_option CYGPKG_SQLITE_CFLAGS_ADD {
+            display "Additional compiler flags"
+            flavor  data
+            no_define
+            default_value { "-DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_HOMEGROWN_RECURSIVE_MUTEX -DSQLITE_DISABLE_LFS -DSQLITE_DISABLE_DIRSYNC -DSQLITE_ENABLE_LOCKING_STYLE=1 -DOS_VXWORKS=1 -DSQLITE_TEMP_STORE=3 -DSQLITE_TEMP_FILE_PREFIX='\"s\"'" }
+            description   "
+                This option modifies the set of compiler flags for
+                building the SQLITE package.
+                These flags are used in addition to the set of global flags."
+        }
+
+        cdl_option CYGPKG_SQLITE_CFLAGS_REMOVE {
+            display "Suppressed compiler flags"
+            flavor  data
+            no_define
+            default_value { "" }
+            description   "
+                This option modifies the set of compiler flags for
+                building the SQLITE package.
+                These flags are removed from the set of global flags
+                if present."
+        }
+    }
+}

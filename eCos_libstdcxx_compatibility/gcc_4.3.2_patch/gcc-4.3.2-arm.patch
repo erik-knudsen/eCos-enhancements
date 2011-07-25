@@ -1,0 +1,245 @@
+diff -x CVS -x .svn -x '*~' -x '.#*' -urpN gcc-4.3.2.clean/gcc/config/arm/arm.h gcc-4.3.2/gcc/config/arm/arm.h
+--- gcc-4.3.2.clean/gcc/config/arm/arm.h	2007-11-05 17:13:46.000000000 +0000
++++ gcc-4.3.2/gcc/config/arm/arm.h	2008-07-03 17:10:38.000000000 +0100
+@@ -2799,4 +2799,9 @@ enum arm_builtins
+ #define NEED_INDICATE_EXEC_STACK	0
+ #endif
+ 
++/* If profiling, ensure we consider the LR clobbered, so that the
++   prologue saves it, thus avoiding problems with tail call optimizations. */
++#define PROFILE_HOOK(X)						\
++  emit_insn (gen_rtx_CLOBBER (VOIDmode, gen_rtx_REG (SImode, LR_REGNUM)))
++
+ #endif /* ! GCC_ARM_H */
+diff -x CVS -x .svn -x '*~' -x '.#*' -urpN gcc-4.3.2.clean/gcc/config/arm/t-arm-elf gcc-4.3.2/gcc/config/arm/t-arm-elf
+--- gcc-4.3.2.clean/gcc/config/arm/t-arm-elf	2007-01-03 23:48:10.000000000 +0000
++++ gcc-4.3.2/gcc/config/arm/t-arm-elf	2008-12-12 17:30:42.000000000 +0000
+@@ -6,35 +6,38 @@ LIB1ASMFUNCS = _udivsi3 _divsi3 _umodsi3
+ 	_truncdfsf2 _negsf2 _addsubsf3 _muldivsf3 _cmpsf2 _unordsf2 \
+ 	_fixsfsi _fixunssfsi _floatdidf _floatdisf _floatundidf _floatundisf
+ 
++# Note - the selection of multilibs here has
++# been tailored to the requirements of eCosPro.
++
+ MULTILIB_OPTIONS     = marm/mthumb
+ MULTILIB_DIRNAMES    = arm thumb
+ MULTILIB_EXCEPTIONS  = 
+ MULTILIB_MATCHES     =
+ 
+-#MULTILIB_OPTIONS      += march=armv7
+-#MULTILIB_DIRNAMES     += thumb2
+-#MULTILIB_EXCEPTIONS   += march=armv7* marm/*march=armv7*
+-#MULTILIB_MATCHES      += march?armv7=march?armv7-a
+-#MULTILIB_MATCHES      += march?armv7=march?armv7-r
+-#MULTILIB_MATCHES      += march?armv7=march?armv7-m
+-#MULTILIB_MATCHES      += march?armv7=mcpu?cortex-a8
+-#MULTILIB_MATCHES      += march?armv7=mcpu?cortex-r4
+-#MULTILIB_MATCHES      += march?armv7=mcpu?cortex-m3
++MULTILIB_OPTIONS      += march=armv7
++MULTILIB_DIRNAMES     += thumb2
++MULTILIB_EXCEPTIONS   += march=armv7* marm/*march=armv7*
++MULTILIB_MATCHES      += march?armv7=march?armv7-a
++MULTILIB_MATCHES      += march?armv7=march?armv7-r
++MULTILIB_MATCHES      += march?armv7=march?armv7-m
++MULTILIB_MATCHES      += march?armv7=mcpu?cortex-a8
++MULTILIB_MATCHES      += march?armv7=mcpu?cortex-r4
++MULTILIB_MATCHES      += march?armv7=mcpu?cortex-m3
+ 
+ # MULTILIB_OPTIONS    += mcpu=ep9312
+ # MULTILIB_DIRNAMES   += ep9312
+ # MULTILIB_EXCEPTIONS += *mthumb/*mcpu=ep9312*
+ # 	
+-# MULTILIB_OPTIONS     += mlittle-endian/mbig-endian
+-# MULTILIB_DIRNAMES    += le be
+-# MULTILIB_MATCHES     += mbig-endian=mbe mlittle-endian=mle
+-# 
++MULTILIB_OPTIONS     += mlittle-endian/mbig-endian
++MULTILIB_DIRNAMES    += le be
++MULTILIB_MATCHES     += mbig-endian=mbe mlittle-endian=mle
++ 
+ # MULTILIB_OPTIONS    += mhard-float/msoft-float
+ # MULTILIB_DIRNAMES   += fpu soft
+ # MULTILIB_EXCEPTIONS += *mthumb/*mhard-float*
+ # 
+-# MULTILIB_OPTIONS    += mno-thumb-interwork/mthumb-interwork
+-# MULTILIB_DIRNAMES   += normal interwork
++MULTILIB_OPTIONS    += mno-thumb-interwork
++MULTILIB_DIRNAMES   += nointerwork
+ # 
+ # MULTILIB_OPTIONS    += fno-leading-underscore/fleading-underscore
+ # MULTILIB_DIRNAMES   += elf under
+@@ -66,6 +69,37 @@ MULTILIB_MATCHES     =
+ # MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm610
+ # MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm620
+ 
++MULTILIB_OPTIONS    += mcpu=arm9/mcpu=arm9e/mcpu=xscale
++MULTILIB_DIRNAMES   += arm9 arm9e xscale
++
++# Disallow armv7 with any of these alternative cores
++MULTILIB_EXCEPTIONS += *march=armv7/*mcpu=arm7*
++MULTILIB_EXCEPTIONS += *march=armv7/*mcpu=arm9*
++MULTILIB_EXCEPTIONS += *march=armv7/*mcpu=xscale*
++
++# we choose not to build big-endian on armv7 nor arm9/arm9e to save space
++MULTILIB_EXCEPTIONS += *march=armv7/*mbig-endian*
++MULTILIB_EXCEPTIONS += *mbig-endian*/*mcpu=arm9*
++
++# armv5 and upwards don't need special handling for interworking
++# but can still benefit from disabling it (code size); and it avoids
++# problems matching multilib args, so only exclude interworking and thumb2
++MULTILIB_EXCEPTIONS += *march=armv7/*mno-thumb-interwork*
++
++# Match relevant arm9 cores
++MULTILIB_MATCHES    += mcpu?arm9=mcpu?arm9tdmi
++MULTILIB_MATCHES    += mcpu?arm9=mcpu?arm920
++MULTILIB_MATCHES    += mcpu?arm9=mcpu?arm920t
++MULTILIB_MATCHES    += mcpu?arm9=mcpu?arm922t
++MULTILIB_MATCHES    += mcpu?arm9=mcpu?arm940t
++
++# Match relevant arm9e cores (also arm9ej)
++MULTILIB_MATCHES    += mcpu?arm9e=mcpu?arm946e-s
++MULTILIB_MATCHES    += mcpu?arm9e=mcpu?arm966e-s
++MULTILIB_MATCHES    += mcpu?arm9e=mcpu?arm968e-s
++MULTILIB_MATCHES    += mcpu?arm9e=mcpu?arm926ej-s
++MULTILIB_MATCHES    += mcpu?arm9e=mcpu?arm1026ej-s
++
+ EXTRA_MULTILIB_PARTS = crtbegin.o crtend.o crti.o crtn.o
+ 
+ # If EXTRA_MULTILIB_PARTS is not defined above then define EXTRA_PARTS here
+--- gcc-4.3.2.clean/gcc/config/arm/arm.h	2008-09-22 19:41:47.000000000 +0100
++++ gcc-4.3.2/gcc/config/arm/arm.h	2008-10-03 22:54:49.000000000 +0100
+@@ -194,7 +194,7 @@ extern void (*arm_lang_output_object_att
+ #define TARGET_BACKTRACE	        (leaf_function_p () \
+ 				         ? TARGET_TPCS_LEAF_FRAME \
+ 				         : TARGET_TPCS_FRAME)
+-#define TARGET_LDRD			(arm_arch5e && ARM_DOUBLEWORD_ALIGN)
++#define TARGET_LDRD			(0) /* arm_arch5e && ARM_DOUBLEWORD_ALIGN) */
+ #define TARGET_AAPCS_BASED \
+     (arm_abi != ARM_ABI_APCS && arm_abi != ARM_ABI_ATPCS)
+ 
+diff -x CVS -x .svn -x '*~' -x '.#*' -x autom4te.cache -urpN gcc-4.3.2.clean/libgcc/config/arm/t-divmod-ef gcc-4.3.2/libgcc/config/arm/t-divmod-ef
+--- gcc-4.3.2.clean/libgcc/config/arm/t-divmod-ef	1970-01-01 01:00:00.000000000 +0100
++++ gcc-4.3.2/libgcc/config/arm/t-divmod-ef	2008-10-07 05:09:24.000000000 +0100
+@@ -0,0 +1,4 @@
++# On ARM, specifying -fnon-call-exceptions will needlessly pull in
++# the unwinder in simple programs which use 64-bit division.  Omitting
++# the option is safe.
++LIB2_DIVMOD_EXCEPTION_FLAGS := -fexceptions
+diff -x CVS -x .svn -x '*~' -x '.#*' -x autom4te.cache -urpN gcc-4.3.2.clean/libgcc/config.host gcc-4.3.2/libgcc/config.host
+--- gcc-4.3.2.clean/libgcc/config.host	2008-01-25 20:49:04.000000000 +0000
++++ gcc-4.3.2/libgcc/config.host	2008-10-07 05:09:24.000000000 +0100
+@@ -229,6 +229,7 @@ arm*-*-uclinux*)		# ARM ucLinux
+ arm*-*-ecos-elf)
+ 	;;
+ arm*-*-eabi* | arm*-*-symbianelf* )
++	tmake_file="${tmake_file} arm/t-divmod-ef"
+ 	;;
+ arm*-*-rtems*)
+ 	;;
+diff -x CVS -x .svn -x '*~' -x '.#*' -x autom4te.cache -urpN gcc-4.3.2.clean/libgcc/Makefile.in gcc-4.3.2/libgcc/Makefile.in
+--- gcc-4.3.2.clean/libgcc/Makefile.in	2008-06-17 10:32:34.000000000 +0100
++++ gcc-4.3.2/libgcc/Makefile.in	2008-10-07 05:09:24.000000000 +0100
+@@ -388,18 +388,24 @@ libgcc-s-objects += $(patsubst %,%_s$(ob
+ endif
+ endif
+ 
++ifeq ($(LIB2_DIVMOD_EXCEPTION_FLAGS),)
++# Provide default flags for compiling divmod functions, if they haven't been
++# set already by a target-specific Makefile fragment.
++LIB2_DIVMOD_EXCEPTION_FLAGS := -fexceptions -fnon-call-exceptions
++endif
++
+ # Build LIB2_DIVMOD_FUNCS.
+ lib2-divmod-o = $(patsubst %,%$(objext),$(LIB2_DIVMOD_FUNCS))
+ $(lib2-divmod-o): %$(objext): $(gcc_srcdir)/libgcc2.c
+ 	$(gcc_compile) -DL$* -c $(gcc_srcdir)/libgcc2.c \
+-	  -fexceptions -fnon-call-exceptions $(vis_hide)
++	  $(LIB2_DIVMOD_EXCEPTION_FLAGS) $(vis_hide)
+ libgcc-objects += $(lib2-divmod-o)
+ 
+ ifeq ($(enable_shared),yes)
+ lib2-divmod-s-o = $(patsubst %,%_s$(objext),$(LIB2_DIVMOD_FUNCS))
+ $(lib2-divmod-s-o): %_s$(objext): $(gcc_srcdir)/libgcc2.c
+ 	$(gcc_s_compile) -DL$* -c $(gcc_srcdir)/libgcc2.c \
+-	  -fexceptions -fnon-call-exceptions
++	  $(LIB2_DIVMOD_EXCEPTION_FLAGS)
+ libgcc-s-objects += $(lib2-divmod-s-o)
+ endif
+ 
+diff -x CVS -x .svn -x '*~' -x '.#*' -x autom4te.cache -urpN gcc-4.3.2.clean/libgcc/shared-object.mk gcc-4.3.2/libgcc/shared-object.mk
+--- gcc-4.3.2.clean/libgcc/shared-object.mk	2007-01-04 04:22:37.000000000 +0000
++++ gcc-4.3.2/libgcc/shared-object.mk	2008-10-07 05:09:24.000000000 +0100
+@@ -8,11 +8,13 @@ base := $(basename $(notdir $o))
+ 
+ ifeq ($(suffix $o),.c)
+ 
++c_flags-$(base)$(objext) := $(c_flags)
+ $(base)$(objext): $o
+-	$(gcc_compile) $(c_flags) -c $< $(vis_hide)
++	$(gcc_compile) $(c_flags-$@) -c $< $(vis_hide)
+ 
++c_flags-$(base)_s$(objext) := $(c_flags)
+ $(base)_s$(objext): $o
+-	$(gcc_s_compile) $(c_flags) -c $<
++	$(gcc_s_compile) $(c_flags-$@) -c $<
+ 
+ else
+ 
+diff -x CVS -x .svn -x '*~' -x '.#*' -x autom4te.cache -urpN gcc-4.3.2.clean/libgcc/static-object.mk gcc-4.3.2/libgcc/static-object.mk
+--- gcc-4.3.2.clean/libgcc/static-object.mk	2007-01-04 04:22:37.000000000 +0000
++++ gcc-4.3.2/libgcc/static-object.mk	2008-10-07 05:09:24.000000000 +0100
+@@ -8,8 +8,9 @@ base := $(basename $(notdir $o))
+ 
+ ifeq ($(suffix $o),.c)
+ 
++c_flags-$(base)$(objext) := $(c_flags)
+ $(base)$(objext): $o
+-	$(gcc_compile) $(c_flags) -c $< $(vis_hide)
++	$(gcc_compile) $(c_flags-$@) -c $< $(vis_hide)
+ 
+ else
+ 
+--- gcc-4.3.2.clean/gcc/config/arm/arm.c	2008-06-11 11:52:55.000000000 +0100
++++ gcc-4.3.2/gcc/config/arm/arm.c	2008-10-07 07:05:43.000000000 +0100
+@@ -18483,6 +18483,11 @@ arm_unwind_emit (FILE * asm_out_file, rt
+   if (!ARM_EABI_UNWIND_TABLES)
+     return;
+ 
++  if (!(flag_unwind_tables || cfun->uses_eh_lsda)
++      && (TREE_NOTHROW (current_function_decl)
++	 || cfun->all_throwers_are_sibcalls))
++    return;
++
+   if (GET_CODE (insn) == NOTE || !RTX_FRAME_RELATED_P (insn))
+     return;
+ 
+@@ -18563,7 +18568,17 @@ arm_output_fn_unwind (FILE * f, bool pro
+   if (prologue)
+     fputs ("\t.fnstart\n", f);
+   else
+-    fputs ("\t.fnend\n", f);
++    {
++      /* If this function will never be unwound, then mark it as such.
++	 The same condition is used in arm_unwind_emit to suppress
++	 the frame annotations.  */
++      if (!(flag_unwind_tables || cfun->uses_eh_lsda)
++	 && (TREE_NOTHROW (current_function_decl)
++	     || cfun->all_throwers_are_sibcalls))
++	fputs("\t.cantunwind\n", f);
++
++      fputs ("\t.fnend\n", f);
++    }
+ }
+ 
+ static bool
+--- gcc-4.3.2.clean/gcc/config/arm/elf.h	2007-08-02 11:49:31.000000000 +0100
++++ gcc-4.3.2/gcc/config/arm/elf.h	2008-12-12 17:31:03.000000000 +0000
+@@ -114,7 +114,7 @@
+ 
+ #ifndef MULTILIB_DEFAULTS
+ #define MULTILIB_DEFAULTS \
+-  { "marm", "mlittle-endian", "msoft-float", "mno-thumb-interwork", "fno-leading-underscore" }
++  { "marm", "mlittle-endian", "msoft-float", "fno-leading-underscore" }
+ #endif
+ 
+ #define TARGET_ASM_FILE_START_APP_OFF true

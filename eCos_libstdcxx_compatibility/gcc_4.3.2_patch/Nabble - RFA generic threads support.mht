@@ -1,0 +1,5001 @@
+From: <Gemt af Windows Internet Explorer 7>
+Subject: Nabble - RFA: generic threads support
+Date: Wed, 4 Apr 2007 09:01:53 +0200
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----=_NextPart_000_0000_01C77697.E3F7B6F0"
+X-MimeOLE: Produced By Microsoft MimeOLE V6.00.2900.3028
+
+This is a multi-part message in MIME format.
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: text/html;
+	charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://www.nabble.com/RFA:-generic-threads-support-t1338578.html
+
+=EF=BB=BF<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML><HEAD><TITLE>Nabble - RFA: generic threads support</TITLE>
+<META http-equiv=3DContent-Type =
+content=3Dtext/html;charset=3Dutf-8><LINK=20
+href=3D"http://www.nabble.com/site.css" type=3Dtext/css =
+rel=3Dstylesheet>
+<SCRIPT src=3D"http://www.nabble.com/Javascript.jtp"></SCRIPT>
+
+<SCRIPT>
+Nabble.setVar("skin",null);
+</SCRIPT>
+
+<SCRIPT>Nabble.setFontSize();</SCRIPT>
+
+<SCRIPT src=3D"http://www.google-analytics.com/urchin.js"=20
+type=3Dtext/javascript></SCRIPT>
+
+<SCRIPT src=3D"http://www.nabble.com/static/analytics.js"=20
+type=3Dtext/javascript></SCRIPT>
+
+<SCRIPT type=3Dtext/javascript>
+	Nabble.page =3D 'forum.TopicDump';
+</SCRIPT>
+
+<META=20
+content=3D"RFA: generic threads support. To verify that this patch =
+doesn't break current configure, I configured and started bootstrapping =
+an i686-pc-linux-gnu native..."=20
+name=3Ddescription>
+<META content=3D"generic, gcc, threads, patches, rfa, support" =
+name=3Dkeywords>
+<META content=3Dindex,follow name=3Drobots>
+<SCRIPT>
+
+Nabble.deletePost =3D function(postId) {
+	if( !confirm("Are you sure you want to permanently delete this message =
+and all of its replies?") )
+		return;
+	top.location =3D =
+"/forum/DeletePost.jtp?post=3D"+postId+"&pwd=3D"+this.getCookie("password=
+");
+};
+
+
+// flagging
+
+Nabble.setFlag =3D function(postId) {
+	if( this.user=3D=3Dnull ) {
+		if( confirm(
+			"You must be logged in to flag a message.\n"
+			+"Would you like to login now?"
+		) ) {
+			top.location =3D =
+"/user/Login.jtp?nextUrl=3D"+encodeURIComponent(top.location);
+		}
+		return;
+	}
+	this.isFlagged[postId] =3D !this.isFlagged[postId];
+	top.location =3D "/forum/Flag.jtp?post=3D" + postId + "&flag=3D" + =
+this.isFlagged[postId];
+	this.showFlag(postId);
+};
+
+Nabble.flaggedImg =3D new Image();
+Nabble.flaggedImg.src =3D "/images/icon_flagged.png";
+Nabble.unflaggedImg =3D new Image();
+Nabble.unflaggedImg.src =3D "/images/icon_unflagged.png";
+
+Nabble.showFlag =3D function(postId) {
+	var img =3D this.get("nabble.flag"+postId);
+	if( this.isFlagged[postId] ) {
+		img.src =3D this.flaggedImg.src;
+		img.alt =3D "Flagged, click to clear flag";
+	} else {
+		img.src =3D this.unflaggedImg.src;
+		img.alt =3D "Click to flag this post";
+	}
+	this.get("nabble.aflag"+postId).title =3D img.alt;
+}
+
+
+// rating
+
+Nabble.emptyStar =3D new Image();
+Nabble.emptyStar.src =3D "/images/icon_star_grey.png";
+Nabble.ratedStar =3D new Image();
+Nabble.ratedStar.src =3D "/images/icon_star_red.png";
+Nabble.predStar =3D new Image();
+Nabble.predStar.src =3D "/images/icon_star_blue.png";
+
+Nabble.clicked =3D function(postId,n) {
+	if( this.user=3D=3Dnull ) {
+		if( confirm(
+			"You must be logged in to rate a post.\n"
+			+"Would you like to login now?"
+		) ) {
+			top.location =3D =
+"/user/Login.jtp?nextUrl=3D"+encodeURIComponent(top.location);
+		}
+		return;
+	}
+	this.ratedStars[postId] =3D n;
+	location =3D =
+"/rating/SetRating.jtp?post=3D"+postId+"&rating=3D"+n+"&pwd=3D"+this.getC=
+ookie("password");
+};
+
+Nabble.mouseover =3D function(postId,n) {
+	for( i=3D1; i<=3Dn; i++ ) {
+		this.get('nabble.star'+postId+'-'+i).src =3D this.ratedStar.src;
+	}
+	for( ; i<=3D5; i++ ) {
+		this.get('nabble.star'+postId+'-'+i).src =3D this.emptyStar.src;
+	}
+	status =3D this.get('nabble.star'+postId+'-'+n).alt;
+	this.get("nabble.descriptor"+postId).innerHTML =3D [
+		"Clear Rating",
+		"Poor Post",
+		"Below Average Post",
+		"Average Post",
+		"Above Average Post",
+		"Excellent Post",
+	][n];
+};
+
+Nabble.mouseout =3D function(postId) {
+	for( i=3D1; i<=3Dthis.ratedStars[postId]; i++ ) {
+		this.get('nabble.star'+postId+'-'+i).src =3D this.ratedStar.src;
+	}
+	for( ; i<=3D5; i++ ) {
+		this.get('nabble.star'+postId+'-'+i).src =3D this.emptyStar.src;
+	}
+	status =3D defaultStatus;
+	this.get("nabble.descriptor"+postId).innerHTML =3D '- Use ratings to =
+moderate (<a title=3D"Click for more info" target=3D"_top" =
+href=3D"http://www.nabble.com/help/Answer.jtp?id=3D16">?</a>)';
+};
+
+Nabble.setEditAlert =3D function(alertId) {
+    var link =3D this.get('nabble.alertlink');
+    link.href =3D =
+"/alerts/EmailAlerts.jtp?id=3D"+alertId+"&from=3Dmodify&back=3D"+encodeUR=
+IComponent(top.location);
+    link.innerHTML =3D 'Edit email alert';
+};
+
+Nabble.searchterms =3D Nabble.getSearchterms();
+if( Nabble.gquery!=3Dnull && Nabble.hideAd )
+	Nabble.hasAdSense =3D false;
+
+Nabble.tview =3D "dump";
+
+Nabble.setView =3D function(newView,post) {
+	Nabble.setVar("tview",newView);
+	var url =3D =
+"http://www.nabble.com/RFA%3A-generic-threads-support-tf1338578.html";
+	if( post !=3D null )
+		url +=3D "#a" + post;
+	top.location.replace(url);
+};
+
+Nabble.cur =3D location.hash ? location.hash.substr(2) : null;
+
+Nabble.setMarker =3D function(post) {
+	if( Nabble.cur ) {
+		var t =3D Nabble.get( "nabble.i" + Nabble.cur );
+		if( t ) {
+			t.style.visibility =3D "hidden";
+		}
+	}
+	Nabble.cur =3D post;
+	var t =3D Nabble.get( "nabble.i" + Nabble.cur );
+	if( t ) {
+		t.style.visibility =3D "visible";
+	}
+}
+
+Nabble.messageTextWidth();
+
+</SCRIPT>
+
+<META content=3D"MSHTML 6.00.6000.16414" name=3DGENERATOR></HEAD>
+<BODY>
+<SCRIPT>
+Nabble.addCssRule(document.styleSheets[0],'.nabble =
+a:link','color:'+document.linkColor);
+Nabble.addCssRule(document.styleSheets[0],'.nabble =
+a:visited','color:'+document.vlinkColor);
+</SCRIPT>
+
+<DIV class=3Dnabble id=3Dnabble>
+<DIV class=3D"top-bar light-border-color">
+<DIV class=3Dbreadcrumbs style=3D"FLOAT: left"><A title=3D"free forum =
+hosting"=20
+href=3D"http://www.nabble.com/" target=3D_top><IMG =
+style=3D"VERTICAL-ALIGN: middle"=20
+height=3D14 alt=3D"free forum hosting"=20
+src=3D"http://www.nabble.com/images/logo_nabble_forums.png" width=3D112=20
+border=3D0></A> <SPAN id=3Dnabble.path><NOBR><A=20
+href=3D"http://www.nabble.com/Software-f94.html" =
+target=3D_top>Software</A></NOBR> =C2=BB=20
+<NOBR><A href=3D"http://www.nabble.com/gcc-f1154.html" =
+target=3D_top>gcc</A></NOBR>=20
+=C2=BB <NOBR><A href=3D"http://www.nabble.com/gcc---patches-f1160.html" =
+target=3D_top>gcc=20
+- patches</A></NOBR></SPAN> </DIV>
+<DIV style=3D"TEXT-ALIGN: right"><SPAN id=3Dnabble.user_header=20
+style=3D"WHITE-SPACE: nowrap"></SPAN></DIV></DIV>
+<DIV style=3D"CLEAR: both">
+<SCRIPT>
+Nabble.userHeader(1160);
+</SCRIPT>
+
+<DIV class=3D"header dark-border-color">
+<H1><A href=3D"http://www.nabble.com/gcc---patches-f1160.html">gcc -=20
+patches</A></H1>
+<DIV class=3Dsearch-box><SPAN style=3D"WHITE-SPACE: nowrap">
+<FORM style=3D"DISPLAY: inline; MARGIN: 0px" =
+action=3D/forum/Search.jtp><SPAN=20
+class=3Dform-label>Search:</SPAN> <INPUT type=3Dhidden value=3D1160 =
+name=3Dforum><SELECT=20
+id=3Dnabble.searchSelect name=3Dlocal><OPTION value=3Dy selected>This=20
+  forum</OPTION><OPTION value=3Dn>All Forums</OPTION></SELECT> <INPUT=20
+id=3Dnabble.searchQuery size=3D30 name=3Dquery> <INPUT class=3Dgo-btn =
+type=3Dsubmit value=3D"Go =C2=BB"> </FORM></SPAN></DIV></DIV>
+<DIV style=3D"CLEAR: both"><NOSCRIPT>
+<DIV class=3Derror-message><STRONG>This site requires =
+JavaScript.</STRONG>=20
+</DIV></NOSCRIPT>
+<H1 style=3D"MARGIN-TOP: 0.25em">RFA: generic threads support</H1>
+<TABLE=20
+style=3D"FONT-SIZE: 0.9em; MARGIN: 0.5em 0px; WIDTH: 100%; =
+BORDER-COLLAPSE: collapse">
+  <TBODY>
+  <TR>
+    <TD>6 Messages :: <SPAN class=3Dimportant=20
+      style=3D"FONT-WEIGHT: bold; WHITE-SPACE: nowrap">Rating:</SPAN> =
+<SELECT=20
+      onchange=3D"top.location =3D this.value"> <OPTION=20
+        =
+value=3Dhttp://www.nabble.com/RFA%3A-generic-threads-support-t1338578r1.h=
+tml>1</OPTION>=20
+        <OPTION=20
+        =
+value=3Dhttp://www.nabble.com/RFA%3A-generic-threads-support-t1338578.htm=
+l=20
+        selected>2</OPTION> <OPTION=20
+        =
+value=3Dhttp://www.nabble.com/RFA%3A-generic-threads-support-t1338578r3.h=
+tml>3</OPTION>=20
+        <OPTION=20
+        =
+value=3Dhttp://www.nabble.com/RFA%3A-generic-threads-support-t1338578r4.h=
+tml>4</OPTION>=20
+        <OPTION=20
+        =
+value=3Dhttp://www.nabble.com/RFA%3A-generic-threads-support-t1338578r5.h=
+tml>5</OPTION></SELECT>=20
+      :: View: <SELECT id=3Dnabble.viewSelect=20
+      onchange=3DNabble.setView(this.value,Nabble.cur)> <OPTION =
+value=3Dthreaded=20
+        selected>Threaded</OPTION> <OPTION =
+value=3Dchron>Chronologically</OPTION>=20
+        <OPTION value=3Ddump>All Messages</OPTION></SELECT>
+      <SCRIPT>
+Nabble.selectOption(Nabble.get("nabble.viewSelect"),Nabble.tview)
+</SCRIPT>
+       </TD>
+    <TD style=3D"TEXT-ALIGN: right"><A id=3Dnabble.alertlink=20
+      =
+href=3D"http://www.nabble.com/alerts/EmailAlerts.jtp?topic=3D1338578&amp;=
+from=3Dnew"=20
+      target=3D_top rel=3Dnofollow>Alert me of new posts</A>
+      <SCRIPT>
+Nabble.get("nabble.alertlink").href +=3D "&back=3D" + =
+encodeURIComponent(top.location);
+
+if( Nabble.user =3D=3D 19981 ) {
+	document.writeln('| <a href=3D"/forum/MoveTopic.jtp?topic=3D1338578" =
+rel=3D"nofollow" target=3D_top>Move Thread to Another Forum</a>');
+}
+
+</SCRIPT>
+       <SPAN id=3Dnabble.assign></SPAN></TD></TR></TBODY></TABLE>
+<TABLE class=3Dchron-dump-table style=3D"WIDTH: 100%; BORDER-COLLAPSE: =
+collapse">
+  <STYLE type=3Dtext/css>.nabble .chron-dump-table TD {
+	PADDING-RIGHT: 0.4em; PADDING-LEFT: 0.8em; PADDING-BOTTOM: 1.25em; =
+PADDING-TOP: 0.8em; BORDER-BOTTOM: 1px solid
+}
+.nabble .chron-dump-table TD H2 {
+	DISPLAY: inline; FONT-WEIGHT: bold; FONT-SIZE: 1.2em; MARGIN-LEFT: 0px; =
+MARGIN-RIGHT: 0.6em
+}
+.nabble .chron-dump-table TD.current-message {
+	WIDTH: 1.7em; PADDING-TOP: 1.25em
+}
+.nabble .chron-dump-table TD DIV.message-details {
+	MARGIN: 0.75em 0px
+}
+.nabble .chron-dump-table TD DIV.message-details A {
+	TEXT-DECORATION: none
+}
+.nabble .chron-dump-table TD DIV.message-details A:hover {
+	TEXT-DECORATION: underline
+}
+</STYLE>
+
+  <TBODY>
+  <TR>
+  <TR vAlign=3Dtop><!-- Current Message -->
+    <TD class=3Dcurrent-message><SPAN id=3Dnabble.i3578549=20
+      style=3D"VISIBILITY: hidden"><IMG height=3D12 alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_tri.png" width=3D12=20
+      align=3DabsMiddle></SPAN> </TD>
+    <TD><!-- Subject --><A name=3Da3578549>
+      <H2>RFA: generic threads support</H2><A id=3Dnabble.aflag3578549=20
+      href=3D"javascript: void Nabble.setFlag(3578549);"><IMG=20
+      id=3Dnabble.flag3578549 onmouseover=3D"status =3D alt; return =
+true;"=20
+      onmouseout=3D"status =3D defaultStatus; return true;" height=3D15=20
+      src=3D"http://www.nabble.com/images/icon_unflagged.png" width=3D15 =
+
+      border=3D0></A> <!-- /Subject --><!-- Message Actions --><IMG=20
+      title=3D"3 stars" height=3D12 alt=3D"3 stars"=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+border=3D0>=20
+      <DIV class=3D"message-actions weak-color">
+      <P class=3Dmessage-actions1>by
+      <SCRIPT>document.write('<a href=3D\"' +'/user/UserProfile' + =
+'.jtp?'+'user=3D19981\" rel=3D\"nofollow\" =
+target=3D\"_top\">');</SCRIPT>
+       Joern RENNECKE
+      <SCRIPT>document.write('</a>');</SCRIPT>
+       <SPAN class=3Dweak-color>
+      <SCRIPT>document.write(Nabble.formatDateLong(new =
+Date(1143231459000)));</SCRIPT>
+      </SPAN>:: Rate this Message: <A=20
+      onmouseover=3D"Nabble.mouseover(3578549,1); return true;"=20
+      title=3D"Click to rate as Poor Post"=20
+      onclick=3D"Nabble.clicked(3578549,1); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3578549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3578549-1 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3578549,2); return true;"=20
+      title=3D"Click to rate as Below Average Post"=20
+      onclick=3D"Nabble.clicked(3578549,2); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3578549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3578549-2 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3578549,3); return true;"=20
+      title=3D"Click to rate as Average Post"=20
+      onclick=3D"Nabble.clicked(3578549,3); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3578549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3578549-3 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3578549,4); return true;"=20
+      title=3D"Click to rate as Above Average Post"=20
+      onclick=3D"Nabble.clicked(3578549,4); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3578549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3578549-4 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3578549,5); return true;"=20
+      title=3D"Click to rate as Excellent Post"=20
+      onclick=3D"Nabble.clicked(3578549,5); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3578549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3578549-5 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A> <A=20
+      onmouseover=3D"Nabble.mouseover(3578549,0); return true;"=20
+      title=3D"Click to clear rating"=20
+      onclick=3D"Nabble.clicked(3578549,0); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3578549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3578549-0 style=3D"VERTICAL-ALIGN: middle" =
+alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_clear_rating.png" =
+border=3D0></A>=20
+      <SPAN id=3Dnabble.descriptor3578549></SPAN></P>
+      <P class=3Dmessage-actions2>
+      <SCRIPT>
+document.writeln('<a href=3D"/forum/Reply.jtp?post=3D3578549" =
+rel=3D"nofollow" target=3D"_top">Reply</a> | ');
+</SCRIPT>
+      <A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpm&amp;post=3D357=
+8549"=20
+      target=3D_top rel=3Dnofollow>Reply to Author</A>
+      <SCRIPT>
+if( Nabble.user =3D=3D 19981 ) {
+   =20
+	document.writeln('| <a href=3D"javascript:Nabble.deletePost(3578549)" =
+rel=3D"nofollow">Delete</a>');
+}
+
+</SCRIPT>
+       | <A href=3D"javascript: void =
+Nabble.setView('threaded',3578549);">View=20
+      Threaded</A> | <A=20
+      =
+href=3D"http://www.nabble.com/RFA%3A-generic-threads-support-p3578549.htm=
+l"=20
+      target=3D_top>Show Only this Message</A> </P></DIV>
+      <DIV class=3Dmessage-details>
+      <DIV id=3Dnabble.pending3578549></DIV>
+      <DIV class=3Dmessage-text id=3Dnabble.msgtxt3578549>To verify that =
+this patch=20
+      doesn't break current configure, I configured <BR>and started=20
+      <BR>bootstrapping an i686-pc-linux-gnu native toolchain, which has =
+
+      <BR>progressed into <BR>stage 2 so far. <BR><BR>This patch allows =
+to use=20
+      enable-threads=3Dgeneric so a toolchain can be <BR>compiled with, =
+and be=20
+      used to compile, thread-agnostic libraries. <BR>Without adding =
+further=20
+      object files / libraries, the behaviour is as if you <BR>selected =
+no=20
+      thread support, suitable for a system without any OS services. =
+<BR>All the=20
+      thread functions are supplied as weak out-of-line stub functions. =
+<BR>When=20
+      you add an object file / library that replaces some or all of =
+these=20
+      <BR>stub functions with OS-specific implementation, threading is =
+enabled=20
+      to <BR>the extent that working implementations are provided. =
+&nbsp;I.e.=20
+      you could <BR>elect to provide full thread support, or just =
+support the=20
+      functions <BR>that are needed for C language threading. =
+<BR><BR>This=20
+      mechanism allows to use a single toolchain to target multiple OS=20
+      <BR>environments for the same processor. <BR><BR>2006-03-23 =
+&nbsp;Antony=20
+      King &lt;<A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;post=3D3=
+578549&amp;i=3D0"=20
+      target=3D_top=20
+      =
+rel=3Dnofollow>http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;p=
+ost=3D3578549&amp;i=3D0</A>&gt;=20
+      <BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; J"orn Rennecke =
+&lt;<A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;post=3D3=
+578549&amp;i=3D1"=20
+      target=3D_top=20
+      =
+rel=3Dnofollow>http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;p=
+ost=3D3578549&amp;i=3D1</A>&gt;=20
+      <BR><BR>&nbsp; &nbsp; &nbsp; &nbsp; * configure.ac: Recognize =
+'generic'=20
+      value for threads. <BR>&nbsp; &nbsp; &nbsp; &nbsp; Check for =
+existance of=20
+      a *.c and gthr-objc-*.c file for thread support. <BR>&nbsp; &nbsp; =
+&nbsp;=20
+      &nbsp; Substiture in extra_libgcc_srcs and =
+extra_libgcc_static_srcs.=20
+      <BR>&nbsp; &nbsp; &nbsp; &nbsp; * configure: Regenerate. =
+<BR>&nbsp; &nbsp;=20
+      &nbsp; &nbsp; * Makefile.in (LIB2ADD): Add @extra_libgcc_srcs@. =
+<BR>&nbsp;=20
+      &nbsp; &nbsp; &nbsp; (LIB2ADD_ST): Add @extra_libgcc_static_srcs@. =
+
+      <BR>&nbsp; &nbsp; &nbsp; &nbsp; * gthr-generic.h: New file. =
+<BR>&nbsp;=20
+      &nbsp; &nbsp; &nbsp; * gthr-generic.c: New file. <BR>&nbsp; &nbsp; =
+&nbsp;=20
+      &nbsp; * gthr-objc-generic.c: New file. <BR><BR>Index: =
+gthr-objc-generic.c=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L gthr-objc-generic.c (revision =
+0) -L=20
+      gthr-objc-generic.c (revision 0) .svn/empty-file =
+gthr-objc-generic.c=20
+      <BR>--- gthr-objc-generic.c (revision 0) <BR>+++ =
+gthr-objc-generic.c=20
+      (revision 0) <BR>@@ -0,0 +1,208 @@ <BR>+/* Threads compatibility =
+routines=20
+      for libobjc. &nbsp;*/ <BR>+/* Compile this one with gcc. &nbsp;*/ =
+<BR>+/*=20
+      Copyright (C) 1997, 1999, 2000, 2006 Free Software Foundation, =
+Inc. <BR>+=20
+      <BR>+This file is part of GCC. <BR>+ <BR>+GCC is free software; =
+you can=20
+      redistribute it and/or modify it under <BR>+the terms of the GNU =
+General=20
+      Public License as published by the Free <BR>+Software Foundation; =
+either=20
+      version 2, or (at your option) any later <BR>+version. <BR>+ =
+<BR>+GCC is=20
+      distributed in the hope that it will be useful, but WITHOUT ANY=20
+      <BR>+WARRANTY; without even the implied warranty of =
+MERCHANTABILITY or=20
+      <BR>+FITNESS FOR A PARTICULAR PURPOSE. &nbsp;See the GNU General =
+Public=20
+      License <BR>+for more details. <BR>+ <BR>+You should have received =
+a copy=20
+      of the GNU General Public License <BR>+along with GCC; see the =
+file=20
+      COPYING. &nbsp;If not, write to the Free <BR>+Software Foundation, =
+59=20
+      Temple Place - Suite 330, Boston, MA <BR>+02111-1307, USA. =
+&nbsp;*/ <BR>+=20
+      <BR>+/* As a special exception, if you link this library with =
+other files,=20
+      <BR>+ &nbsp; some of which are compiled with GCC, to produce an=20
+      executable, <BR>+ &nbsp; this library does not by itself cause the =
+
+      resulting executable <BR>+ &nbsp; to be covered by the GNU General =
+Public=20
+      License. <BR>+ &nbsp; This exception does not however invalidate =
+any other=20
+      reasons why <BR>+ &nbsp; the executable file might be covered by =
+the GNU=20
+      General Public License. &nbsp;*/ <BR>+ <BR>+#include "tconfig.h" =
+<BR>+=20
+      <BR>+#define __GTHR_WEAK __attribute__ ((weak)) <BR>+#define =
+_LIBOBJC=20
+      <BR>+ <BR>+/* ??? The objc thread types are defined in=20
+      ../libobjc/objc/thr.h, <BR>+ &nbsp; but we don't want the gcc core =
+to=20
+      depend on libobjc. &nbsp;*/ <BR>+typedef void * objc_thread_t;=20
+      <BR>+typedef struct objc_mutex *objc_mutex_t; <BR>+typedef struct=20
+      objc_condition *objc_condition_t; <BR>+#define=20
+      OBJC_THREAD_INTERACTIVE_PRIORITY &nbsp; &nbsp; &nbsp; &nbsp;2 =
+<BR>+=20
+      <BR>+#include "gthr.h" <BR>+ <BR>+#define UNUSED(x) x =
+ATTRIBUTE_UNUSED=20
+      <BR>+ <BR>+/* Just provide compatibility for mutex handling. =
+&nbsp;*/=20
+      <BR>+ <BR>+/* Thread local storage for a single thread */ =
+<BR>+static void=20
+      *thread_local_storage =3D 0; <BR>+ <BR>+/* Backend initialization =
+functions=20
+      */ <BR>+ <BR>+/* Initialize the threads subsystem. &nbsp;*/ =
+<BR>+int=20
+      <BR>+__generic_gxx_objc_init_thread_system (void) <BR>+{ <BR>+ =
+&nbsp;/* No=20
+      thread support available */ <BR>+ &nbsp;return -1; <BR>+} <BR>+ =
+<BR>+/*=20
+      Close the threads subsystem. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_close_thread_system (void) <BR>+{ <BR>+ =
+&nbsp;/*=20
+      No thread support available */ <BR>+ &nbsp;return -1; <BR>+} <BR>+ =
+<BR>+/*=20
+      Backend thread functions */ <BR>+ <BR>+/* Create a new thread of=20
+      execution. &nbsp;*/ <BR>+objc_thread_t=20
+      <BR>+__generic_gxx_objc_thread_detach (void (* func)(void *), void =
+*=20
+      UNUSED(arg)) <BR>+{ <BR>+ &nbsp;/* No thread support available */ =
+<BR>+=20
+      &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Set the current thread's =
+priority.=20
+      &nbsp;*/ <BR>+int <BR>+__generic_gxx_objc_thread_set_priority (int =
+
+      UNUSED(priority)) <BR>+{ <BR>+ &nbsp;/* No thread support =
+available */=20
+      <BR>+ &nbsp;return -1; <BR>+} <BR>+ <BR>+/* Return the current =
+thread's=20
+      priority. &nbsp;*/ <BR>+int =
+<BR>+__generic_gxx_objc_thread_get_priority=20
+      (void) <BR>+{ <BR>+ &nbsp;return OBJC_THREAD_INTERACTIVE_PRIORITY; =
+<BR>+}=20
+      <BR>+ <BR>+/* Yield our process time to another thread. &nbsp;*/ =
+<BR>+void=20
+      <BR>+__generic_gxx_objc_thread_yield (void) <BR>+{ <BR>+ =
+&nbsp;return;=20
+      <BR>+} <BR>+ <BR>+/* Terminate the current thread. &nbsp;*/ =
+<BR>+int=20
+      <BR>+__generic_gxx_objc_thread_exit (void) <BR>+{ <BR>+ &nbsp;/* =
+No thread=20
+      support available */ <BR>+ &nbsp;/* Should we really exit the =
+program */=20
+      <BR>+ &nbsp;/* exit (&amp;__objc_thread_exit_status); */ <BR>+=20
+      &nbsp;return -1; <BR>+} <BR>+ <BR>+/* Returns an integer value =
+which=20
+      uniquely describes a thread. &nbsp;*/ <BR>+objc_thread_t=20
+      <BR>+__generic_gxx_objc_thread_id (void) <BR>+{ <BR>+ &nbsp;/* No =
+thread=20
+      support, use 1. &nbsp;*/ <BR>+ &nbsp;return (objc_thread_t) 1; =
+<BR>+}=20
+      <BR>+ <BR>+/* Sets the thread's local storage pointer. &nbsp;*/ =
+<BR>+int=20
+      <BR>+__generic_gxx_objc_thread_set_data (void *value) <BR>+{ <BR>+ =
+
+      &nbsp;thread_local_storage =3D value; <BR>+ &nbsp;return 0; <BR>+} =
+<BR>+=20
+      <BR>+/* Returns the thread's local storage pointer. &nbsp;*/ =
+<BR>+void *=20
+      <BR>+__generic_gxx_objc_thread_get_data (void) <BR>+{ <BR>+ =
+&nbsp;return=20
+      thread_local_storage; <BR>+} <BR>+ <BR>+/* Backend mutex functions =
+*/=20
+      <BR>+ <BR>+/* Allocate a mutex. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_mutex_allocate (objc_mutex_t =
+UNUSED(mutex)) <BR>+{=20
+      <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Deallocate a mutex. =
+&nbsp;*/=20
+      <BR>+int <BR>+__generic_gxx_objc_mutex_deallocate (objc_mutex_t=20
+      UNUSED(mutex)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* =
+Grab a=20
+      lock on a mutex. &nbsp;*/ <BR>+int =
+<BR>+__generic_gxx_objc_mutex_lock=20
+      (objc_mutex_t UNUSED(mutex)) <BR>+{ <BR>+ &nbsp;/* There can only =
+be one=20
+      thread, so we always get the lock */ <BR>+ &nbsp;return 0; <BR>+} =
+<BR>+=20
+      <BR>+/* Try to grab a lock on a mutex. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_mutex_trylock (objc_mutex_t UNUSED(mutex)) =
+<BR>+{=20
+      <BR>+ &nbsp;/* There can only be one thread, so we always get the =
+lock */=20
+      <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Unlock the mutex */ =
+<BR>+int=20
+      <BR>+__generic_gxx_objc_mutex_unlock (objc_mutex_t UNUSED(mutex)) =
+<BR>+{=20
+      <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Backend condition mutex =
+
+      functions */ <BR>+ <BR>+/* Allocate a condition. &nbsp;*/ <BR>+int =
+
+      <BR>+__generic_gxx_objc_condition_allocate (objc_condition_t=20
+      UNUSED(condition)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+<BR>+/*=20
+      Deallocate a condition. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_condition_deallocate (objc_condition_t=20
+      UNUSED(condition)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+<BR>+/* Wait=20
+      on the condition */ <BR>+int =
+<BR>+__generic_gxx_objc_condition_wait=20
+      (objc_condition_t UNUSED(condition), <BR>+ &nbsp; objc_mutex_t=20
+      UNUSED(mutex)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* =
+Wake up=20
+      all threads waiting on this condition. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_condition_broadcast (objc_condition_t=20
+      UNUSED(condition)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+<BR>+/* Wake=20
+      up one thread waiting on this condition. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_condition_signal (objc_condition_t=20
+      UNUSED(condition)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>Index:=20
+      configure.ac=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L configure.ac (revision 112353) =
+-L=20
+      configure.ac (working copy) .svn/text-base/configure.ac.svn-base=20
+      configure.ac <BR>--- configure.ac (revision 112353) <BR>+++ =
+configure.ac=20
+      (working copy) <BR>@@ -1352,7 +1352,7 @@ case ${enable_threads} in =
+
+      <BR>&nbsp; &nbsp; &nbsp;target_thread_file=3D'single' <BR>&nbsp; =
+&nbsp;=20
+      &nbsp;;; <BR>&nbsp; &nbsp;aix | dce | gnat | irix | posix | =
+posix95 |=20
+      rtems | \ <BR>- &nbsp;single | solaris | vxworks | win32 ) <BR>+=20
+      &nbsp;single | solaris | vxworks | win32 | generic) <BR>&nbsp; =
+&nbsp;=20
+      &nbsp;target_thread_file=3D${enable_threads} <BR>&nbsp; &nbsp; =
+&nbsp;;;=20
+      <BR>&nbsp; &nbsp;*) <BR>@@ -1373,6 +1373,14 @@ if test =
+$thread_file !=3D=20
+      single; then <BR>&nbsp; &nbsp;rm -f gthr-default.h <BR>&nbsp; =
+&nbsp;echo=20
+      "#include \"gthr-${thread_file}.h\"" &gt; gthr-default.h =
+<BR>&nbsp;=20
+      &nbsp;gthread_flags=3D-DHAVE_GTHR_DEFAULT <BR>+ &nbsp;if test =
+$thread_file=20
+      !=3D posix; then <BR>+ &nbsp; &nbsp;if test -f=20
+      $srcdir/gthr-${thread_file}.c; then <BR>+ &nbsp; &nbsp;=20
+      &nbsp;extra_libgcc_srcs=3D$srcdir/gthr-${thread_file}.c <BR>+ =
+&nbsp;=20
+      &nbsp;fi <BR>+ &nbsp; &nbsp;if test -f =
+$srcdir/gthr-objc-${thread_file}.c;=20
+      then <BR>+ &nbsp; &nbsp; =
+&nbsp;extra_libgcc_srcs=3D"${extra_libgcc_srcs}=20
+      $srcdir/gthr-objc-${thread_file}.c" <BR>+ &nbsp; &nbsp;fi <BR>+ =
+&nbsp;fi=20
+      <BR>&nbsp;fi <BR>&nbsp;AC_SUBST(gthread_flags) <BR>&nbsp; <BR>@@ =
+-3514,6=20
+      +3522,8 @@ AC_SUBST(xmake_file) <BR>&nbsp;AC_SUBST(tmake_file)=20
+      <BR>&nbsp;AC_SUBST(extra_gcc_objs) =
+<BR>&nbsp;AC_SUBST(extra_headers_list)=20
+      <BR>+AC_SUBST(extra_libgcc_srcs) =
+<BR>+AC_SUBST(extra_libgcc_static_srcs)=20
+      <BR>&nbsp;AC_SUBST(extra_objs) <BR>&nbsp;AC_SUBST(extra_parts)=20
+      <BR>&nbsp;AC_SUBST(extra_passes) <BR>Index: gthr-generic.c=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L gthr-generic.c (revision 0) -L=20
+      gthr-generic.c (revision 0) .svn/empty-file gthr-generic.c <BR>--- =
+
+      gthr-generic.c (revision 0) <BR>+++ gthr-generic.c (revision 0) =
+<BR>@@=20
+      -0,0 +1,129 @@ <BR>+/* Generic threads supplementary =
+implementation. */=20
+      <BR>+/* Compile this one with gcc. &nbsp;*/ <BR>+/* Copyright (C) =
+1997,=20
+      1999, 2000, 2002, 2006 Free Software Foundation, Inc. <BR>+ =
+<BR>+This file=20
+      is part of GNU CC. <BR>+ <BR>+GNU CC is free software; you can=20
+      redistribute it and/or modify <BR>+it under the terms of the GNU =
+General=20
+      Public License as published by <BR>+the Free Software Foundation; =
+either=20
+      version 2, or (at your option) <BR>+any later version. <BR>+ =
+<BR>+GNU CC=20
+      is distributed in the hope that it will be useful, <BR>+but =
+WITHOUT ANY=20
+      WARRANTY; without even the implied warranty of =
+<BR>+MERCHANTABILITY or=20
+      FITNESS FOR A PARTICULAR PURPOSE. &nbsp;See the <BR>+GNU General =
+Public=20
+      License for more details. <BR>+ <BR>+You should have received a =
+copy of=20
+      the GNU General Public License <BR>+along with GNU CC; see the =
+file=20
+      COPYING. &nbsp;If not, write to <BR>+the Free Software Foundation, =
+59=20
+      Temple Place - Suite 330, <BR>+Boston, MA 02111-1307, USA. =
+&nbsp;*/ <BR>+=20
+      <BR>+/* As a special exception, if you link this library with =
+other files,=20
+      <BR>+ &nbsp; some of which are compiled with GCC, to produce an=20
+      executable, <BR>+ &nbsp; this library does not by itself cause the =
+
+      resulting executable <BR>+ &nbsp; to be covered by the GNU General =
+Public=20
+      License. <BR>+ &nbsp; This exception does not however invalidate =
+any other=20
+      reasons why <BR>+ &nbsp; the executable file might be covered by =
+the GNU=20
+      General Public License. &nbsp;*/ <BR>+ <BR>+#define __GTHR_WEAK=20
+      __attribute__ ((weak)) <BR>+ <BR>+#include "tconfig.h" =
+<BR>+#include=20
+      "gthr.h" <BR>+ <BR>+#ifndef __gthr_generic_h <BR>+#error "Generic =
+thread=20
+      support package not supported" <BR>+#endif <BR>+ <BR>+/* These are =
+stub=20
+      functions. &nbsp;When threading is available, a suitable set of=20
+      definitions should be linked in. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_active_p (void) <BR>+{ <BR>+ &nbsp;return 0; =
+<BR>+}=20
+      <BR>+ <BR>+int <BR>+__generic_gxx_once (__gthread_once_t *once=20
+      ATTRIBUTE_UNUSED, <BR>+ &nbsp; &nbsp;void (*func)(void) =
+ATTRIBUTE_UNUSED)=20
+      <BR>+{ <BR>+ &nbsp;return -1; <BR>+} <BR>+ <BR>+int=20
+      <BR>+__generic_gxx_key_create (__gthread_key_t *key =
+ATTRIBUTE_UNUSED,=20
+      <BR>+ &nbsp;void (*dtor)(void *) ATTRIBUTE_UNUSED) <BR>+{ <BR>+=20
+      &nbsp;return -1; <BR>+} <BR>+ <BR>+int <BR>+__generic_gxx_key_dtor =
+
+      (__gthread_key_t key ATTRIBUTE_UNUSED, <BR>+ void *ptr =
+ATTRIBUTE_UNUSED)=20
+      <BR>+{ <BR>+ &nbsp;return -1; <BR>+} <BR>+ <BR>+int=20
+      <BR>+__generic_gxx_key_delete (__gthread_key_t key =
+ATTRIBUTE_UNUSED)=20
+      <BR>+{ <BR>+ &nbsp;return -1; <BR>+} <BR>+ <BR>+void *=20
+      <BR>+__generic_gxx_getspecific (__gthread_key_t key =
+ATTRIBUTE_UNUSED)=20
+      <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+int=20
+      <BR>+__generic_gxx_setspecific (__gthread_key_t key =
+ATTRIBUTE_UNUSED,=20
+      <BR>+ &nbsp; &nbsp; &nbsp;const void *ptr ATTRIBUTE_UNUSED) <BR>+{ =
+<BR>+=20
+      &nbsp;return -1; <BR>+} <BR>+ <BR>+void=20
+      <BR>+__generic_gxx_mutex_init_function (__gthread_mutex_t *mutex=20
+      ATTRIBUTE_UNUSED) <BR>+{ <BR>+} <BR>+ <BR>+int=20
+      <BR>+__generic_gxx_mutex_lock (__gthread_mutex_t *mutex =
+ATTRIBUTE_UNUSED)=20
+      <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+int=20
+      <BR>+__generic_gxx_mutex_trylock (__gthread_mutex_t *mutex=20
+      ATTRIBUTE_UNUSED) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+<BR>+int=20
+      <BR>+__generic_gxx_mutex_unlock (__gthread_mutex_t *mutex=20
+      ATTRIBUTE_UNUSED) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+<BR>+void=20
+      <BR>+__generic_gxx_recursive_mutex_init_function=20
+      (__gthread_recursive_mutex_t *mutex ATTRIBUTE_UNUSED) <BR>+{ =
+<BR>+} <BR>+=20
+      <BR>+int <BR>+__generic_gxx_recursive_mutex_lock=20
+      (__gthread_recursive_mutex_t *mutex ATTRIBUTE_UNUSED) <BR>+{ <BR>+ =
+
+      &nbsp;return 0; <BR>+} <BR>+ <BR>+int=20
+      <BR>+__generic_gxx_recursive_mutex_trylock =
+(__gthread_recursive_mutex_t=20
+      *mutex ATTRIBUTE_UNUSED) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+
+      <BR>+int <BR>+__generic_gxx_recursive_mutex_unlock=20
+      (__gthread_recursive_mutex_t *mutex ATTRIBUTE_UNUSED) <BR>+{ <BR>+ =
+
+      &nbsp;return 0; <BR>+} <BR>Index: gthr-generic.h=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L gthr-generic.h (revision 0) -L=20
+      gthr-generic.h (revision 0) .svn/empty-file gthr-generic.h <BR>--- =
+
+      gthr-generic.h (revision 0) <BR>+++ gthr-generic.h (revision 0) =
+<BR>@@=20
+      -0,0 +1,373 @@ <BR>+/* Generic threads compatibility routines for =
+libgcc2=20
+      and libobjc. */ <BR>+/* Compile this one with gcc. &nbsp;*/ =
+<BR>+/*=20
+      Copyright (C) 1997, 1999, 2000, 2002, 2006 Free Software =
+Foundation, Inc.=20
+      <BR>+ <BR>+This file is part of GNU CC. <BR>+ <BR>+GNU CC is free=20
+      software; you can redistribute it and/or modify <BR>+it under the =
+terms of=20
+      the GNU General Public License as published by <BR>+the Free =
+Software=20
+      Foundation; either version 2, or (at your option) <BR>+any later =
+version.=20
+      <BR>+ <BR>+GNU CC is distributed in the hope that it will be =
+useful,=20
+      <BR>+but WITHOUT ANY WARRANTY; without even the implied warranty =
+of=20
+      <BR>+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. =
+&nbsp;See the=20
+      <BR>+GNU General Public License for more details. <BR>+ <BR>+You =
+should=20
+      have received a copy of the GNU General Public License <BR>+along =
+with GNU=20
+      CC; see the file COPYING. &nbsp;If not, write to <BR>+the Free =
+Software=20
+      Foundation, 59 Temple Place - Suite 330, <BR>+Boston, MA =
+02111-1307, USA.=20
+      &nbsp;*/ <BR>+ <BR>+/* As a special exception, if you link this =
+library=20
+      with other files, <BR>+ &nbsp; some of which are compiled with =
+GCC, to=20
+      produce an executable, <BR>+ &nbsp; this library does not by =
+itself cause=20
+      the resulting executable <BR>+ &nbsp; to be covered by the GNU =
+General=20
+      Public License. <BR>+ &nbsp; This exception does not however =
+invalidate=20
+      any other reasons why <BR>+ &nbsp; the executable file might be =
+covered by=20
+      the GNU General Public License. &nbsp;*/ <BR>+ <BR>+#ifndef=20
+      __gthr_generic_h <BR>+#define __gthr_generic_h <BR>+ <BR>+#define=20
+      __GTHREADS 1 <BR>+ <BR>+#define __GTHREAD_ONCE_INIT 0 <BR>+#define =
+
+      __GTHREAD_MUTEX_INIT_FUNCTION __gthread_mutex_init_function =
+<BR>+#define=20
+      __GTHREAD_RECURSIVE_MUTEX_INIT_FUNCTION=20
+      __gthread_recursive_mutex_init_function <BR>+ <BR>+#ifdef =
+__cplusplus=20
+      <BR>+extern "C" { <BR>+#endif <BR>+ <BR>+/* avoid depedency on =
+specific=20
+      headers */ <BR>+typedef void *__gthread_key_t; <BR>+typedef void=20
+      *__gthread_once_t; <BR>+typedef struct __gthread_mutex_s { void =
+*p; }=20
+      __gthread_mutex_t; <BR>+typedef struct __gthread_recursive_mutex_s =
+{ void=20
+      *p; } __gthread_recursive_mutex_t; <BR>+ <BR>+/* We should always =
+link=20
+      with at least one definition, so we want strong <BR>+ &nbsp; =
+references.=20
+      &nbsp;The stub definitions are weak so that they can be overriden. =
+
+      &nbsp;*/ <BR>+#ifndef __GTHR_WEAK <BR>+#define __GTHR_WEAK =
+<BR>+#endif=20
+      <BR>+ <BR>+extern int __generic_gxx_active_p (void) __GTHR_WEAK; =
+<BR>+=20
+      <BR>+extern int __generic_gxx_once (__gthread_once_t *, void =
+(*)(void))=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int __generic_gxx_key_create=20
+      (__gthread_key_t *, <BR>+ &nbsp; &nbsp; void (*)(void *)) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern int __generic_gxx_key_dtor (__gthread_key_t, =
+void *)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int __generic_gxx_key_delete=20
+      (__gthread_key_t key) __GTHR_WEAK; <BR>+ <BR>+extern void=20
+      *__generic_gxx_getspecific (__gthread_key_t key) __GTHR_WEAK; =
+<BR>+=20
+      <BR>+extern int __generic_gxx_setspecific (__gthread_key_t, const =
+void *)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern void =
+__generic_gxx_mutex_init_function=20
+      (__gthread_mutex_t *) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_mutex_lock (__gthread_mutex_t *) __GTHR_WEAK; <BR>+=20
+      <BR>+extern int __generic_gxx_mutex_trylock (__gthread_mutex_t *)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int __generic_gxx_mutex_unlock=20
+      (__gthread_mutex_t *) __GTHR_WEAK; <BR>+ <BR>+extern void=20
+      __generic_gxx_recursive_mutex_init_function =
+(__gthread_recursive_mutex_t=20
+      *) __GTHR_WEAK; <BR>+ <BR>+extern int =
+__generic_gxx_recursive_mutex_lock=20
+      (__gthread_recursive_mutex_t *) __GTHR_WEAK; <BR>+ <BR>+extern int =
+
+      __generic_gxx_recursive_mutex_trylock (__gthread_recursive_mutex_t =
+*)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int =
+__generic_gxx_recursive_mutex_unlock=20
+      (__gthread_recursive_mutex_t *) __GTHR_WEAK; <BR>+ <BR>+#ifdef =
+__cplusplus=20
+      <BR>+} <BR>+#endif <BR>+ <BR>+#ifdef _LIBOBJC <BR>+ <BR>+extern =
+int=20
+      __generic_gxx_objc_init_thread_system (void) __GTHR_WEAK; <BR>+=20
+      <BR>+extern int __generic_gxx_objc_close_thread_system (void) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern objc_thread_t __generic_gxx_objc_thread_detach =
+(void=20
+      (*)(void *), void *) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_objc_thread_set_priority (int priority) __GTHR_WEAK; =
+<BR>+=20
+      <BR>+extern int __generic_gxx_objc_thread_get_priority (void) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern void __generic_gxx_objc_thread_yield (void) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern int __generic_gxx_objc_thread_exit (void) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern objc_thread_t __generic_gxx_objc_thread_id =
+(void)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int =
+__generic_gxx_objc_thread_set_data=20
+      (void *value) __GTHR_WEAK; <BR>+ <BR>+extern void=20
+      *__generic_gxx_objc_thread_get_data (void) __GTHR_WEAK; <BR>+ =
+<BR>+extern=20
+      int __generic_gxx_objc_mutex_allocate (objc_mutex_t) __GTHR_WEAK; =
+<BR>+=20
+      <BR>+extern int __generic_gxx_objc_mutex_deallocate (objc_mutex_t) =
+
+      __GTHR_WEAK; <BR>+ <BR>+extern int __generic_gxx_objc_mutex_lock=20
+      (objc_mutex_t) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_objc_mutex_trylock (objc_mutex_t) __GTHR_WEAK; <BR>+ =
+
+      <BR>+extern int __generic_gxx_objc_mutex_unlock (objc_mutex_t)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int =
+__generic_gxx_objc_condition_allocate=20
+      (objc_condition_t) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_objc_condition_deallocate (objc_condition_t) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern int __generic_gxx_objc_condition_wait =
+(objc_condition_t,=20
+      objc_mutex_t) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_objc_condition_broadcast (objc_condition_t) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern int __generic_gxx_objc_condition_signal=20
+      (objc_condition_t) __GTHR_WEAK; <BR>+ <BR>+/* Backend =
+initialization=20
+      functions */ <BR>+ <BR>+/* Initialize the threads subsystem. =
+&nbsp;*/=20
+      <BR>+static inline int <BR>+__gthread_objc_init_thread_system =
+(void)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_init_thread_system =
+(); <BR>+}=20
+      <BR>+ <BR>+/* Close the threads subsystem. &nbsp;*/ <BR>+static =
+inline int=20
+      <BR>+__gthread_objc_close_thread_system (void) <BR>+{ <BR>+ =
+&nbsp;return=20
+      __generic_gxx_objc_close_thread_system (); <BR>+} <BR>+ <BR>+/* =
+Backend=20
+      thread functions */ <BR>+ <BR>+/* Create a new thread of =
+execution.=20
+      &nbsp;*/ <BR>+static inline objc_thread_t=20
+      <BR>+__gthread_objc_thread_detach (void (* func)(void *), void * =
+arg)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_thread_detach (func, =
+arg);=20
+      <BR>+} <BR>+ <BR>+/* Set the current thread's priority. &nbsp;*/=20
+      <BR>+static inline int <BR>+__gthread_objc_thread_set_priority =
+(int=20
+      priority) <BR>+{ <BR>+ &nbsp;return =
+__generic_gxx_objc_thread_set_priority=20
+      (priority); <BR>+} <BR>+ <BR>+/* Return the current thread's =
+priority.=20
+      &nbsp;*/ <BR>+static inline int =
+<BR>+__gthread_objc_thread_get_priority=20
+      (void) <BR>+{ <BR>+ &nbsp;return =
+__generic_gxx_objc_thread_get_priority=20
+      (); <BR>+} <BR>+ <BR>+/* Yield our process time to another thread. =
+
+      &nbsp;*/ <BR>+static inline void <BR>+__gthread_objc_thread_yield =
+(void)=20
+      <BR>+{ <BR>+ &nbsp;__generic_gxx_objc_thread_yield (); <BR>+} =
+<BR>+=20
+      <BR>+/* Terminate the current thread. &nbsp;*/ <BR>+static inline =
+int=20
+      <BR>+__gthread_objc_thread_exit (void) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_objc_thread_exit (); <BR>+} <BR>+ <BR>+/* Returns an =
+integer=20
+      value which uniquely describes a thread. &nbsp;*/ <BR>+static =
+inline=20
+      objc_thread_t <BR>+__gthread_objc_thread_id (void) <BR>+{ <BR>+=20
+      &nbsp;return __generic_gxx_objc_thread_id (); <BR>+} <BR>+ <BR>+/* =
+Sets=20
+      the thread's local storage pointer. &nbsp;*/ <BR>+static inline =
+int=20
+      <BR>+__gthread_objc_thread_set_data (void *value) <BR>+{ <BR>+=20
+      &nbsp;return __generic_gxx_objc_thread_set_data (value); <BR>+} =
+<BR>+=20
+      <BR>+/* Returns the thread's local storage pointer. &nbsp;*/ =
+<BR>+static=20
+      inline void * <BR>+__gthread_objc_thread_get_data (void) <BR>+{ =
+<BR>+=20
+      &nbsp;return __generic_gxx_objc_thread_get_data (); <BR>+} <BR>+ =
+<BR>+/*=20
+      Backend mutex functions */ <BR>+ <BR>+/* Allocate a mutex. =
+&nbsp;*/=20
+      <BR>+static inline int <BR>+__gthread_objc_mutex_allocate =
+(objc_mutex_t=20
+      mutex) <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_mutex_allocate =
+
+      (mutex); <BR>+} <BR>+ <BR>+/* Deallocate a mutex. &nbsp;*/ =
+<BR>+static=20
+      inline int <BR>+__gthread_objc_mutex_deallocate (objc_mutex_t =
+mutex)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_mutex_deallocate =
+(mutex);=20
+      <BR>+} <BR>+ <BR>+/* Grab a lock on a mutex. &nbsp;*/ <BR>+static =
+inline=20
+      int <BR>+__gthread_objc_mutex_lock (objc_mutex_t mutex) <BR>+{ =
+<BR>+=20
+      &nbsp;return __generic_gxx_objc_mutex_lock (mutex); <BR>+} <BR>+ =
+<BR>+/*=20
+      Try to grab a lock on a mutex. &nbsp;*/ <BR>+static inline int=20
+      <BR>+__gthread_objc_mutex_trylock (objc_mutex_t mutex) <BR>+{ =
+<BR>+=20
+      &nbsp;return __generic_gxx_objc_mutex_trylock (mutex); <BR>+} =
+<BR>+=20
+      <BR>+/* Unlock the mutex */ <BR>+static inline int=20
+      <BR>+__gthread_objc_mutex_unlock (objc_mutex_t mutex) <BR>+{ <BR>+ =
+
+      &nbsp;return __generic_gxx_objc_mutex_unlock (mutex); <BR>+} <BR>+ =
+<BR>+/*=20
+      Backend condition mutex functions */ <BR>+ <BR>+/* Allocate a =
+condition.=20
+      &nbsp;*/ <BR>+static inline int =
+<BR>+__gthread_objc_condition_allocate=20
+      (objc_condition_t condition) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_objc_condition_allocate (condition); <BR>+} <BR>+ =
+<BR>+/*=20
+      Deallocate a condition. &nbsp;*/ <BR>+static inline int=20
+      <BR>+__gthread_objc_condition_deallocate (objc_condition_t =
+condition)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_condition_deallocate=20
+      (condition); <BR>+} <BR>+ <BR>+/* Wait on the condition */ =
+<BR>+static=20
+      inline int <BR>+__gthread_objc_condition_wait (objc_condition_t =
+condition,=20
+      objc_mutex_t mutex) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_objc_condition_wait (condition, mutex); <BR>+} <BR>+ =
+<BR>+/*=20
+      Wake up all threads waiting on this condition. &nbsp;*/ =
+<BR>+static inline=20
+      int <BR>+__gthread_objc_condition_broadcast (objc_condition_t =
+condition)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_condition_broadcast ( =
+
+      condition); <BR>+} <BR>+ <BR>+/* Wake up one thread waiting on =
+this=20
+      condition. &nbsp;*/ <BR>+static inline int=20
+      <BR>+__gthread_objc_condition_signal (objc_condition_t condition) =
+<BR>+{=20
+      <BR>+ &nbsp;return __generic_gxx_objc_condition_signal =
+(condition); <BR>+}=20
+      <BR>+ <BR>+#else /* !_LIBOBJC */ <BR>+ <BR>+static inline int=20
+      <BR>+__gthread_active_p (void) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_active_p (); <BR>+} <BR>+ <BR>+static inline int=20
+      <BR>+__gthread_once (__gthread_once_t *once, void (*func)(void)) =
+<BR>+{=20
+      <BR>+ &nbsp;return __generic_gxx_once (once, func); <BR>+} <BR>+=20
+      <BR>+static inline int <BR>+__gthread_key_create (__gthread_key_t =
+*key,=20
+      void (*dtor)(void *)) <BR>+{ <BR>+ &nbsp;return =
+__generic_gxx_key_create=20
+      (key, dtor); <BR>+} <BR>+ <BR>+static inline int =
+<BR>+__gthread_key_dtor=20
+      (__gthread_key_t key, void *ptr) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_key_dtor (key, ptr); <BR>+} <BR>+ <BR>+static inline =
+int=20
+      <BR>+__gthread_key_delete (__gthread_key_t key) <BR>+{ <BR>+ =
+&nbsp;return=20
+      __generic_gxx_key_delete (key); <BR>+} <BR>+ <BR>+static inline =
+void *=20
+      <BR>+__gthread_getspecific (__gthread_key_t key) <BR>+{ <BR>+ =
+&nbsp;return=20
+      __generic_gxx_getspecific (key); <BR>+} <BR>+ <BR>+static inline =
+int=20
+      <BR>+__gthread_setspecific (__gthread_key_t key, const void *ptr) =
+<BR>+{=20
+      <BR>+ &nbsp;return __generic_gxx_setspecific (key, ptr); <BR>+} =
+<BR>+=20
+      <BR>+static inline void <BR>+__gthread_mutex_init_function=20
+      (__gthread_mutex_t *mutex) <BR>+{ <BR>+=20
+      &nbsp;__generic_gxx_mutex_init_function (mutex); <BR>+} <BR>+ =
+<BR>+static=20
+      inline int <BR>+__gthread_mutex_lock (__gthread_mutex_t * mutex) =
+<BR>+{=20
+      <BR>+ &nbsp;return __generic_gxx_mutex_lock (mutex); <BR>+} <BR>+=20
+      <BR>+static inline int <BR>+__gthread_mutex_trylock =
+(__gthread_mutex_t *=20
+      mutex) <BR>+{ <BR>+ &nbsp;return __generic_gxx_mutex_trylock =
+(mutex);=20
+      <BR>+} <BR>+ <BR>+static inline int <BR>+__gthread_mutex_unlock=20
+      (__gthread_mutex_t * mutex) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_mutex_unlock (mutex); <BR>+} <BR>+ <BR>+static =
+inline void=20
+      <BR>+__gthread_recursive_mutex_init_function =
+(__gthread_recursive_mutex_t=20
+      *mutex) <BR>+{ <BR>+ =
+&nbsp;__generic_gxx_recursive_mutex_init_function=20
+      (mutex); <BR>+} <BR>+ <BR>+static inline int=20
+      <BR>+__gthread_recursive_mutex_lock (__gthread_recursive_mutex_t * =
+mutex)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_recursive_mutex_lock =
+(mutex);=20
+      <BR>+} <BR>+ <BR>+static inline int =
+<BR>+__gthread_recursive_mutex_trylock=20
+      (__gthread_recursive_mutex_t * mutex) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_recursive_mutex_trylock (mutex); <BR>+} <BR>+ =
+<BR>+static=20
+      inline int <BR>+__gthread_recursive_mutex_unlock=20
+      (__gthread_recursive_mutex_t * mutex) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_recursive_mutex_unlock (mutex); <BR>+} <BR>+ =
+<BR>+#endif /*=20
+      _LIBOBJC */ <BR>+ <BR>+#endif /* __gthr_generic_h */ <BR>Index:=20
+      Makefile.in=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L Makefile.in (revision 112353) =
+-L=20
+      Makefile.in (working copy) .svn/text-base/Makefile.in.svn-base =
+Makefile.in=20
+      <BR>--- Makefile.in (revision 112353) <BR>+++ Makefile.in (working =
+copy)=20
+      <BR>@@ -1390,8 +1390,8 @@ xlimits.h: glimits.h limitx.h limity.h=20
+      <BR>&nbsp;# <BR>&nbsp;# Build libgcc.a. <BR>&nbsp; <BR>-LIB2ADD =
+=3D=20
+      $(LIB2FUNCS_EXTRA) <BR>-LIB2ADD_ST =3D $(LIB2FUNCS_STATIC_EXTRA)=20
+      <BR>+LIB2ADD =3D $(LIB2FUNCS_EXTRA) @extra_libgcc_srcs@ =
+<BR>+LIB2ADD_ST =3D=20
+      $(LIB2FUNCS_STATIC_EXTRA) @extra_libgcc_static_srcs@ <BR>&nbsp;=20
+      <BR>&nbsp;libgcc.mk: config.status Makefile mklibgcc $(LIB2ADD)=20
+      $(LIB2ADD_ST) specs \ <BR>&nbsp; xgcc$(exeext) stamp-as =
+stamp-collect-ld=20
+      stamp-nm <BR></DIV>
+      <SCRIPT>
+if (Nabble.searchterms !=3D null && Nabble.searchterms.length > 0) {
+	Nabble.hilt(Nabble.searchterms, Nabble.get("nabble.msgtxt3578549"));
+}
+</SCRIPT>
+      </DIV></TD></TR>
+  <TR vAlign=3Dtop><!-- Current Message -->
+    <TD class=3Dcurrent-message><SPAN id=3Dnabble.i3698922=20
+      style=3D"VISIBILITY: hidden"><IMG height=3D12 alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_tri.png" width=3D12=20
+      align=3DabsMiddle></SPAN> </TD>
+    <TD><!-- Subject --><A name=3Da3698922>
+      <H2>Re: RFA: generic threads support</H2><A =
+id=3Dnabble.aflag3698922=20
+      href=3D"javascript: void Nabble.setFlag(3698922);"><IMG=20
+      id=3Dnabble.flag3698922 onmouseover=3D"status =3D alt; return =
+true;"=20
+      onmouseout=3D"status =3D defaultStatus; return true;" height=3D15=20
+      src=3D"http://www.nabble.com/images/icon_unflagged.png" width=3D15 =
+
+      border=3D0></A> <!-- /Subject --><!-- Message Actions --><IMG=20
+      title=3D"3 stars" height=3D12 alt=3D"3 stars"=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+border=3D0>=20
+      <DIV class=3D"message-actions weak-color">
+      <P class=3Dmessage-actions1>by
+      <SCRIPT>document.write('<a href=3D\"' +'/user/UserProfile' + =
+'.jtp?'+'user=3D19067\" rel=3D\"nofollow\" =
+target=3D\"_top\">');</SCRIPT>
+       Mark Mitchell
+      <SCRIPT>document.write('</a>');</SCRIPT>
+       <SPAN class=3Dweak-color>
+      <SCRIPT>document.write(Nabble.formatDateLong(new =
+Date(1143849249000)));</SCRIPT>
+      </SPAN>:: Rate this Message: <A=20
+      onmouseover=3D"Nabble.mouseover(3698922,1); return true;"=20
+      title=3D"Click to rate as Poor Post"=20
+      onclick=3D"Nabble.clicked(3698922,1); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3698922); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3698922-1 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3698922,2); return true;"=20
+      title=3D"Click to rate as Below Average Post"=20
+      onclick=3D"Nabble.clicked(3698922,2); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3698922); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3698922-2 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3698922,3); return true;"=20
+      title=3D"Click to rate as Average Post"=20
+      onclick=3D"Nabble.clicked(3698922,3); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3698922); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3698922-3 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3698922,4); return true;"=20
+      title=3D"Click to rate as Above Average Post"=20
+      onclick=3D"Nabble.clicked(3698922,4); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3698922); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3698922-4 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3698922,5); return true;"=20
+      title=3D"Click to rate as Excellent Post"=20
+      onclick=3D"Nabble.clicked(3698922,5); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3698922); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3698922-5 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A> <A=20
+      onmouseover=3D"Nabble.mouseover(3698922,0); return true;"=20
+      title=3D"Click to clear rating"=20
+      onclick=3D"Nabble.clicked(3698922,0); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3698922); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3698922-0 style=3D"VERTICAL-ALIGN: middle" =
+alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_clear_rating.png" =
+border=3D0></A>=20
+      <SPAN id=3Dnabble.descriptor3698922></SPAN></P>
+      <P class=3Dmessage-actions2>
+      <SCRIPT>
+document.writeln('<a href=3D"/forum/Reply.jtp?post=3D3698922" =
+rel=3D"nofollow" target=3D"_top">Reply</a> | ');
+</SCRIPT>
+      <A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpm&amp;post=3D369=
+8922"=20
+      target=3D_top rel=3Dnofollow>Reply to Author</A>
+      <SCRIPT>
+if( Nabble.user =3D=3D 19067 ) {
+   =20
+	document.writeln('| <a href=3D"javascript:Nabble.deletePost(3698922)" =
+rel=3D"nofollow">Delete</a>');
+}
+
+</SCRIPT>
+       | <A href=3D"javascript: void =
+Nabble.setView('threaded',3698922);">View=20
+      Threaded</A> | <A=20
+      =
+href=3D"http://www.nabble.com/Re%3A-RFA%3A-generic-threads-support-p36989=
+22.html"=20
+      target=3D_top>Show Only this Message</A> </P></DIV>
+      <DIV class=3Dmessage-details>
+      <DIV id=3Dnabble.pending3698922></DIV>
+      <DIV class=3Dmessage-text id=3Dnabble.msgtxt3698922>Joern RENNECKE =
+wrote:=20
+      <BR><BR>&gt; This patch allows to use enable-threads=3Dgeneric so =
+a=20
+      toolchain can be <BR>&gt; compiled with, and be used to compile,=20
+      thread-agnostic libraries. <BR>&gt; Without adding further object =
+files /=20
+      libraries, the behaviour is as if you <BR>&gt; selected no thread =
+support,=20
+      suitable for a system without any OS services. <BR>&gt; All the =
+thread=20
+      functions are supplied as weak out-of-line stub functions. =
+<BR>&gt; When=20
+      you add an object file / library that replaces some or all of =
+these=20
+      <BR>&gt; stub functions with OS-specific implementation, threading =
+is=20
+      enabled to <BR>&gt; the extent that working implementations are =
+provided.=20
+      &nbsp;I.e. you could <BR>&gt; elect to provide full thread =
+support, or=20
+      just support the functions <BR>&gt; that are needed for C language =
+
+      threading. <BR>&gt; <BR>&gt; This mechanism allows to use a single =
+
+      toolchain to target multiple OS <BR>&gt; environments for the same =
+
+      processor. <BR><BR>This seems like a good thing. &nbsp;You snuck =
+it in=20
+      before the Stage 2 <BR>deadline, too!=20
+      <BR><BR>+AC_SUBST(extra_libgcc_static_srcs) <BR><BR>I didn't see =
+anything=20
+      that sets this variable. &nbsp;Where is that? <BR><BR>+Software=20
+      Foundation, 59 Temple Place - Suite 330, Boston, MA =
+<BR>+02111-1307, USA.=20
+      &nbsp;*/ <BR><BR>That's the old address. &nbsp;Needs fixing =
+throughout.=20
+      <BR><BR>You also need documentation for this feature, discussing =
+both the=20
+      new <BR>configure switch, and what you have to do to replace the =
+generic=20
+      <BR>functions, and what the semantics of those functions are, so =
+that=20
+      people <BR>know how to replace them. <BR><BR>-- <BR>Mark Mitchell=20
+      <BR>CodeSourcery <BR><A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;post=3D3=
+698922&amp;i=3D0"=20
+      target=3D_top=20
+      =
+rel=3Dnofollow>http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;p=
+ost=3D3698922&amp;i=3D0</A>=20
+      <BR>(650) 331-3385 x713 <BR></DIV>
+      <SCRIPT>
+if (Nabble.searchterms !=3D null && Nabble.searchterms.length > 0) {
+	Nabble.hilt(Nabble.searchterms, Nabble.get("nabble.msgtxt3698922"));
+}
+</SCRIPT>
+      </DIV></TD></TR>
+  <TR vAlign=3Dtop><!-- Current Message -->
+    <TD class=3Dcurrent-message><SPAN id=3Dnabble.i3726056=20
+      style=3D"VISIBILITY: hidden"><IMG height=3D12 alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_tri.png" width=3D12=20
+      align=3DabsMiddle></SPAN> </TD>
+    <TD><!-- Subject --><A name=3Da3726056>
+      <H2>Re: RFA: generic threads support</H2><A =
+id=3Dnabble.aflag3726056=20
+      href=3D"javascript: void Nabble.setFlag(3726056);"><IMG=20
+      id=3Dnabble.flag3726056 onmouseover=3D"status =3D alt; return =
+true;"=20
+      onmouseout=3D"status =3D defaultStatus; return true;" height=3D15=20
+      src=3D"http://www.nabble.com/images/icon_unflagged.png" width=3D15 =
+
+      border=3D0></A> <!-- /Subject --><!-- Message Actions --><IMG=20
+      title=3D"3 stars" height=3D12 alt=3D"3 stars"=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+border=3D0>=20
+      <DIV class=3D"message-actions weak-color">
+      <P class=3Dmessage-actions1>by
+      <SCRIPT>document.write('<a href=3D\"' +'/user/UserProfile' + =
+'.jtp?'+'user=3D19981\" rel=3D\"nofollow\" =
+target=3D\"_top\">');</SCRIPT>
+       Joern RENNECKE
+      <SCRIPT>document.write('</a>');</SCRIPT>
+       <SPAN class=3Dweak-color>
+      <SCRIPT>document.write(Nabble.formatDateLong(new =
+Date(1144072722000)));</SCRIPT>
+      </SPAN>:: Rate this Message: <A=20
+      onmouseover=3D"Nabble.mouseover(3726056,1); return true;"=20
+      title=3D"Click to rate as Poor Post"=20
+      onclick=3D"Nabble.clicked(3726056,1); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3726056); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3726056-1 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3726056,2); return true;"=20
+      title=3D"Click to rate as Below Average Post"=20
+      onclick=3D"Nabble.clicked(3726056,2); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3726056); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3726056-2 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3726056,3); return true;"=20
+      title=3D"Click to rate as Average Post"=20
+      onclick=3D"Nabble.clicked(3726056,3); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3726056); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3726056-3 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3726056,4); return true;"=20
+      title=3D"Click to rate as Above Average Post"=20
+      onclick=3D"Nabble.clicked(3726056,4); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3726056); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3726056-4 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3726056,5); return true;"=20
+      title=3D"Click to rate as Excellent Post"=20
+      onclick=3D"Nabble.clicked(3726056,5); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3726056); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3726056-5 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A> <A=20
+      onmouseover=3D"Nabble.mouseover(3726056,0); return true;"=20
+      title=3D"Click to clear rating"=20
+      onclick=3D"Nabble.clicked(3726056,0); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3726056); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3726056-0 style=3D"VERTICAL-ALIGN: middle" =
+alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_clear_rating.png" =
+border=3D0></A>=20
+      <SPAN id=3Dnabble.descriptor3726056></SPAN></P>
+      <P class=3Dmessage-actions2>
+      <SCRIPT>
+document.writeln('<a href=3D"/forum/Reply.jtp?post=3D3726056" =
+rel=3D"nofollow" target=3D"_top">Reply</a> | ');
+</SCRIPT>
+      <A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpm&amp;post=3D372=
+6056"=20
+      target=3D_top rel=3Dnofollow>Reply to Author</A>
+      <SCRIPT>
+if( Nabble.user =3D=3D 19981 ) {
+   =20
+	document.writeln('| <a href=3D"javascript:Nabble.deletePost(3726056)" =
+rel=3D"nofollow">Delete</a>');
+}
+
+</SCRIPT>
+       | <A href=3D"javascript: void =
+Nabble.setView('threaded',3726056);">View=20
+      Threaded</A> | <A=20
+      =
+href=3D"http://www.nabble.com/Re%3A-RFA%3A-generic-threads-support-p37260=
+56.html"=20
+      target=3D_top>Show Only this Message</A> </P></DIV>
+      <DIV class=3Dmessage-details>
+      <DIV id=3Dnabble.pending3726056></DIV>
+      <DIV class=3Dmessage-text id=3Dnabble.msgtxt3726056>Mark Mitchell =
+wrote:=20
+      <BR><BR>&gt; &nbsp; <BR>&gt; =
+<BR>&gt;+AC_SUBST(extra_libgcc_static_srcs)=20
+      <BR>&gt; <BR>&gt;I didn't see anything that sets this variable.=20
+      &nbsp;Where is that? <BR>&gt; &nbsp; <BR>&gt; <BR>It's this =
+configure.ac=20
+      hunk: <BR><BR>@@ -1373,6 +1373,14 @@ if test $thread_file !=3D =
+single; then=20
+      <BR>&nbsp; &nbsp;rm -f gthr-default.h <BR>&nbsp; &nbsp;echo =
+"#include=20
+      \"gthr-${thread_file}.h\"" &gt; gthr-default.h <BR>&nbsp;=20
+      &nbsp;gthread_flags=3D-DHAVE_GTHR_DEFAULT <BR>+ &nbsp;if test =
+$thread_file=20
+      !=3D posix; then <BR>+ &nbsp; &nbsp;if test -f=20
+      $srcdir/gthr-${thread_file}.c; then <BR>+ &nbsp; &nbsp;=20
+      &nbsp;extra_libgcc_srcs=3D$srcdir/gthr-${thread_file}.c <BR>+ =
+&nbsp;=20
+      &nbsp;fi <BR>+ &nbsp; &nbsp;if test -f =
+$srcdir/gthr-objc-${thread_file}.c;=20
+      then <BR>+ &nbsp; &nbsp; =
+&nbsp;extra_libgcc_srcs=3D"${extra_libgcc_srcs}=20
+      <BR>$srcdir/gthr-objc-${thread_file}. <BR>c" <BR>+ &nbsp; &nbsp;fi =
+<BR>+=20
+      &nbsp;fi <BR>&nbsp;fi <BR>&nbsp;AC_SUBST(gthread_flags) <BR></DIV>
+      <SCRIPT>
+if (Nabble.searchterms !=3D null && Nabble.searchterms.length > 0) {
+	Nabble.hilt(Nabble.searchterms, Nabble.get("nabble.msgtxt3726056"));
+}
+</SCRIPT>
+      </DIV></TD></TR>
+  <TR vAlign=3Dtop><!-- Current Message -->
+    <TD class=3Dcurrent-message><SPAN id=3Dnabble.i3727549=20
+      style=3D"VISIBILITY: hidden"><IMG height=3D12 alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_tri.png" width=3D12=20
+      align=3DabsMiddle></SPAN> </TD>
+    <TD><!-- Subject --><A name=3Da3727549>
+      <H2>Re: RFA: generic threads support</H2><A =
+id=3Dnabble.aflag3727549=20
+      href=3D"javascript: void Nabble.setFlag(3727549);"><IMG=20
+      id=3Dnabble.flag3727549 onmouseover=3D"status =3D alt; return =
+true;"=20
+      onmouseout=3D"status =3D defaultStatus; return true;" height=3D15=20
+      src=3D"http://www.nabble.com/images/icon_unflagged.png" width=3D15 =
+
+      border=3D0></A> <!-- /Subject --><!-- Message Actions --><IMG=20
+      title=3D"3 stars" height=3D12 alt=3D"3 stars"=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+border=3D0>=20
+      <DIV class=3D"message-actions weak-color">
+      <P class=3Dmessage-actions1>by
+      <SCRIPT>document.write('<a href=3D\"' +'/user/UserProfile' + =
+'.jtp?'+'user=3D19067\" rel=3D\"nofollow\" =
+target=3D\"_top\">');</SCRIPT>
+       Mark Mitchell
+      <SCRIPT>document.write('</a>');</SCRIPT>
+       <SPAN class=3Dweak-color>
+      <SCRIPT>document.write(Nabble.formatDateLong(new =
+Date(1144077906000)));</SCRIPT>
+      </SPAN>:: Rate this Message: <A=20
+      onmouseover=3D"Nabble.mouseover(3727549,1); return true;"=20
+      title=3D"Click to rate as Poor Post"=20
+      onclick=3D"Nabble.clicked(3727549,1); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3727549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3727549-1 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3727549,2); return true;"=20
+      title=3D"Click to rate as Below Average Post"=20
+      onclick=3D"Nabble.clicked(3727549,2); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3727549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3727549-2 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3727549,3); return true;"=20
+      title=3D"Click to rate as Average Post"=20
+      onclick=3D"Nabble.clicked(3727549,3); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3727549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3727549-3 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3727549,4); return true;"=20
+      title=3D"Click to rate as Above Average Post"=20
+      onclick=3D"Nabble.clicked(3727549,4); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3727549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3727549-4 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3727549,5); return true;"=20
+      title=3D"Click to rate as Excellent Post"=20
+      onclick=3D"Nabble.clicked(3727549,5); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3727549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3727549-5 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A> <A=20
+      onmouseover=3D"Nabble.mouseover(3727549,0); return true;"=20
+      title=3D"Click to clear rating"=20
+      onclick=3D"Nabble.clicked(3727549,0); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3727549); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3727549-0 style=3D"VERTICAL-ALIGN: middle" =
+alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_clear_rating.png" =
+border=3D0></A>=20
+      <SPAN id=3Dnabble.descriptor3727549></SPAN></P>
+      <P class=3Dmessage-actions2>
+      <SCRIPT>
+document.writeln('<a href=3D"/forum/Reply.jtp?post=3D3727549" =
+rel=3D"nofollow" target=3D"_top">Reply</a> | ');
+</SCRIPT>
+      <A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpm&amp;post=3D372=
+7549"=20
+      target=3D_top rel=3Dnofollow>Reply to Author</A>
+      <SCRIPT>
+if( Nabble.user =3D=3D 19067 ) {
+   =20
+	document.writeln('| <a href=3D"javascript:Nabble.deletePost(3727549)" =
+rel=3D"nofollow">Delete</a>');
+}
+
+</SCRIPT>
+       | <A href=3D"javascript: void =
+Nabble.setView('threaded',3727549);">View=20
+      Threaded</A> | <A=20
+      =
+href=3D"http://www.nabble.com/Re%3A-RFA%3A-generic-threads-support-p37275=
+49.html"=20
+      target=3D_top>Show Only this Message</A> </P></DIV>
+      <DIV class=3Dmessage-details>
+      <DIV id=3Dnabble.pending3727549></DIV>
+      <DIV class=3Dmessage-text id=3Dnabble.msgtxt3727549>Joern RENNECKE =
+wrote:=20
+      <BR>&gt; Mark Mitchell wrote: <BR>&gt; <BR>&gt;&gt; &nbsp; =
+<BR>&gt;&gt;=20
+      <BR>&gt;&gt; +AC_SUBST(extra_libgcc_static_srcs) <BR>&gt;&gt; =
+<BR>&gt;&gt;=20
+      I didn't see anything that sets this variable. &nbsp;Where is =
+that?=20
+      <BR>&gt;&gt; &nbsp; <BR>&gt;&gt; <BR>&gt; It's this configure.ac =
+hunk:=20
+      <BR><BR>I saw that -- but it sets extra_libgcc_srcs twice, not=20
+      <BR>extra_libgcc_static_srcs. &nbsp;Unless grep failed me. =
+<BR><BR>&gt; +=20
+      &nbsp;if test $thread_file !=3D posix; then <BR>&gt; + &nbsp; =
+&nbsp;if test=20
+      -f $srcdir/gthr-${thread_file}.c; then <BR>&gt; + &nbsp; &nbsp;=20
+      &nbsp;extra_libgcc_srcs=3D$srcdir/gthr-${thread_file}.c <BR>&gt; + =
+&nbsp;=20
+      &nbsp;fi <BR>&gt; + &nbsp; &nbsp;if test -f=20
+      $srcdir/gthr-objc-${thread_file}.c; then <BR>&gt; + &nbsp; &nbsp;=20
+      &nbsp;extra_libgcc_srcs=3D"${extra_libgcc_srcs} <BR>&gt;=20
+      $srcdir/gthr-objc-${thread_file}. <BR>&gt; c" <BR>&gt; + &nbsp; =
+&nbsp;fi=20
+      <BR>&gt; + &nbsp;fi <BR><BR><BR>-- <BR>Mark Mitchell =
+<BR>CodeSourcery=20
+      <BR><A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;post=3D3=
+727549&amp;i=3D0"=20
+      target=3D_top=20
+      =
+rel=3Dnofollow>http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;p=
+ost=3D3727549&amp;i=3D0</A>=20
+      <BR>(650) 331-3385 x713 <BR></DIV>
+      <SCRIPT>
+if (Nabble.searchterms !=3D null && Nabble.searchterms.length > 0) {
+	Nabble.hilt(Nabble.searchterms, Nabble.get("nabble.msgtxt3727549"));
+}
+</SCRIPT>
+      </DIV></TD></TR>
+  <TR vAlign=3Dtop><!-- Current Message -->
+    <TD class=3Dcurrent-message><SPAN id=3Dnabble.i3732233=20
+      style=3D"VISIBILITY: hidden"><IMG height=3D12 alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_tri.png" width=3D12=20
+      align=3DabsMiddle></SPAN> </TD>
+    <TD><!-- Subject --><A name=3Da3732233>
+      <H2>unwind-dw2.c gthread_once SNAFU (Was: Re: RFA: generic threads =
+
+      support)</H2><A id=3Dnabble.aflag3732233=20
+      href=3D"javascript: void Nabble.setFlag(3732233);"><IMG=20
+      id=3Dnabble.flag3732233 onmouseover=3D"status =3D alt; return =
+true;"=20
+      onmouseout=3D"status =3D defaultStatus; return true;" height=3D15=20
+      src=3D"http://www.nabble.com/images/icon_unflagged.png" width=3D15 =
+
+      border=3D0></A> <!-- /Subject --><!-- Message Actions --><IMG=20
+      title=3D"3 stars" height=3D12 alt=3D"3 stars"=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+border=3D0>=20
+      <DIV class=3D"message-actions weak-color">
+      <P class=3Dmessage-actions1>by
+      <SCRIPT>document.write('<a href=3D\"' +'/user/UserProfile' + =
+'.jtp?'+'user=3D19981\" rel=3D\"nofollow\" =
+target=3D\"_top\">');</SCRIPT>
+       Joern RENNECKE
+      <SCRIPT>document.write('</a>');</SCRIPT>
+       <SPAN class=3Dweak-color>
+      <SCRIPT>document.write(Nabble.formatDateLong(new =
+Date(1144093233000)));</SCRIPT>
+      </SPAN>:: Rate this Message: <A=20
+      onmouseover=3D"Nabble.mouseover(3732233,1); return true;"=20
+      title=3D"Click to rate as Poor Post"=20
+      onclick=3D"Nabble.clicked(3732233,1); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3732233); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3732233-1 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3732233,2); return true;"=20
+      title=3D"Click to rate as Below Average Post"=20
+      onclick=3D"Nabble.clicked(3732233,2); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3732233); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3732233-2 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3732233,3); return true;"=20
+      title=3D"Click to rate as Average Post"=20
+      onclick=3D"Nabble.clicked(3732233,3); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3732233); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3732233-3 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3732233,4); return true;"=20
+      title=3D"Click to rate as Above Average Post"=20
+      onclick=3D"Nabble.clicked(3732233,4); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3732233); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3732233-4 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3732233,5); return true;"=20
+      title=3D"Click to rate as Excellent Post"=20
+      onclick=3D"Nabble.clicked(3732233,5); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3732233); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3732233-5 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A> <A=20
+      onmouseover=3D"Nabble.mouseover(3732233,0); return true;"=20
+      title=3D"Click to clear rating"=20
+      onclick=3D"Nabble.clicked(3732233,0); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3732233); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3732233-0 style=3D"VERTICAL-ALIGN: middle" =
+alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_clear_rating.png" =
+border=3D0></A>=20
+      <SPAN id=3Dnabble.descriptor3732233></SPAN></P>
+      <P class=3Dmessage-actions2>
+      <SCRIPT>
+document.writeln('<a href=3D"/forum/Reply.jtp?post=3D3732233" =
+rel=3D"nofollow" target=3D"_top">Reply</a> | ');
+</SCRIPT>
+      <A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpm&amp;post=3D373=
+2233"=20
+      target=3D_top rel=3Dnofollow>Reply to Author</A>
+      <SCRIPT>
+if( Nabble.user =3D=3D 19981 ) {
+   =20
+	document.writeln('| <a href=3D"javascript:Nabble.deletePost(3732233)" =
+rel=3D"nofollow">Delete</a>');
+}
+
+</SCRIPT>
+       | <A href=3D"javascript: void =
+Nabble.setView('threaded',3732233);">View=20
+      Threaded</A> | <A=20
+      =
+href=3D"http://www.nabble.com/unwind-dw2.c-gthread_once-SNAFU-%28Was%3A-R=
+e%3A-RFA%3A-generic-threads-support%29-p3732233.html"=20
+      target=3D_top>Show Only this Message</A> </P></DIV>
+      <DIV class=3Dmessage-details>
+      <DIV id=3Dnabble.pending3732233></DIV>
+      <DIV class=3Dmessage-text id=3Dnabble.msgtxt3732233>Mark Mitchell =
+wrote:=20
+      <BR><BR>&gt;You also need documentation for this feature, =
+discussing both=20
+      the new <BR>&gt;configure switch, and what you have to do to =
+replace the=20
+      generic <BR>&gt;functions, and what the semantics of those =
+functions are,=20
+      so that people <BR>&gt;know how to replace them. <BR>&gt; &nbsp; =
+<BR>&gt;=20
+      <BR>The semantics of these functions are exactly that of the =
+internal=20
+      gthreads <BR>interface of gcc. &nbsp;Of course, such a description =
+is not=20
+      very useful for <BR>a prospective <BR>implementor. &nbsp;I started =
+to look=20
+      at the sources to come up with <BR>descriptions, and <BR>found =
+that this=20
+      interface is not even self-consistent. <BR><BR>gthr.h states that =
+a number=20
+      of functions can -1 for unimplemented <BR>operations, <BR>and =
+various stub=20
+      implementations do just that. <BR><BR>&nbsp;The logic in=20
+      uw_init_context_1:unwind-dw2.c is garbled so that when =
+<BR>__GTHREADS=20
+      <BR>is defined but __gthread_once is unimplemented, &nbsp;=20
+      <BR>init_dwarf_reg_size_table is <BR>called all the time: =
+<BR><BR>#if=20
+      __GTHREADS <BR>&nbsp; { <BR>&nbsp; &nbsp; static __gthread_once_t=20
+      once_regsizes =3D __GTHREAD_nit_dwONCE_INIT; <BR>&nbsp; &nbsp; if=20
+      (__gthread_once (&amp;once_regsizes, init_dwarf_reg_size_table) =
+!=3D 0=20
+      <BR>&nbsp; &nbsp; &nbsp; &nbsp; || dwarf_reg_size_table[0] =3D=3D =
+0)=20
+      <BR>&nbsp; &nbsp; &nbsp; init_dwarf_reg_size_table (); <BR>&nbsp; =
+}=20
+      <BR>#else <BR>&nbsp; if (dwarf_reg_size_table[0] =3D=3D 0) =
+<BR>&nbsp; &nbsp;=20
+      init_dwarf_reg_size_table (); <BR>#endif <BR><BR>That '||' should =
+rather=20
+      be an '&amp;&amp;'. <BR><BR>Or maybe we should make __gthread_once =
+also=20
+      succeed in the non-threading <BR>case? <BR>That should be simple =
+enough,=20
+      and should also allow to simplify=20
+      <BR>libstdc++-v3/include/ext/mt_allocator.h . <BR><BR><BR></DIV>
+      <SCRIPT>
+if (Nabble.searchterms !=3D null && Nabble.searchterms.length > 0) {
+	Nabble.hilt(Nabble.searchterms, Nabble.get("nabble.msgtxt3732233"));
+}
+</SCRIPT>
+      </DIV></TD></TR>
+  <TR vAlign=3Dtop><!-- Current Message -->
+    <TD class=3Dcurrent-message><SPAN id=3Dnabble.i3790781=20
+      style=3D"VISIBILITY: hidden"><IMG height=3D12 alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_tri.png" width=3D12=20
+      align=3DabsMiddle></SPAN> </TD>
+    <TD><!-- Subject --><A name=3Da3790781>
+      <H2>Re: RFA: generic threads support</H2><A =
+id=3Dnabble.aflag3790781=20
+      href=3D"javascript: void Nabble.setFlag(3790781);"><IMG=20
+      id=3Dnabble.flag3790781 onmouseover=3D"status =3D alt; return =
+true;"=20
+      onmouseout=3D"status =3D defaultStatus; return true;" height=3D15=20
+      src=3D"http://www.nabble.com/images/icon_unflagged.png" width=3D15 =
+
+      border=3D0></A> <!-- /Subject --><!-- Message Actions --><IMG=20
+      title=3D"3 stars" height=3D12 alt=3D"3 stars"=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+
+      border=3D0><IMG title=3D"3 stars" height=3D12=20
+      src=3D"http://www.nabble.com/images/icon_star_blue.png" width=3D12 =
+border=3D0>=20
+      <DIV class=3D"message-actions weak-color">
+      <P class=3Dmessage-actions1>by
+      <SCRIPT>document.write('<a href=3D\"' +'/user/UserProfile' + =
+'.jtp?'+'user=3D19981\" rel=3D\"nofollow\" =
+target=3D\"_top\">');</SCRIPT>
+       Joern RENNECKE
+      <SCRIPT>document.write('</a>');</SCRIPT>
+       <SPAN class=3Dweak-color>
+      <SCRIPT>document.write(Nabble.formatDateLong(new =
+Date(1144349954000)));</SCRIPT>
+      </SPAN>:: Rate this Message: <A=20
+      onmouseover=3D"Nabble.mouseover(3790781,1); return true;"=20
+      title=3D"Click to rate as Poor Post"=20
+      onclick=3D"Nabble.clicked(3790781,1); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3790781); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3790781-1 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3790781,2); return true;"=20
+      title=3D"Click to rate as Below Average Post"=20
+      onclick=3D"Nabble.clicked(3790781,2); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3790781); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3790781-2 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3790781,3); return true;"=20
+      title=3D"Click to rate as Average Post"=20
+      onclick=3D"Nabble.clicked(3790781,3); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3790781); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3790781-3 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3790781,4); return true;"=20
+      title=3D"Click to rate as Above Average Post"=20
+      onclick=3D"Nabble.clicked(3790781,4); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3790781); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3790781-4 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A><A=20
+      onmouseover=3D"Nabble.mouseover(3790781,5); return true;"=20
+      title=3D"Click to rate as Excellent Post"=20
+      onclick=3D"Nabble.clicked(3790781,5); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3790781); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3790781-5 style=3D"VERTICAL-ALIGN: middle" =
+height=3D12 alt=3D""=20
+      width=3D12 border=3D0></A> <A=20
+      onmouseover=3D"Nabble.mouseover(3790781,0); return true;"=20
+      title=3D"Click to clear rating"=20
+      onclick=3D"Nabble.clicked(3790781,0); return false;"=20
+      onmouseout=3D"Nabble.mouseout(3790781); return true;"=20
+      =
+href=3D"http://www.nabble.com/RFA:-generic-threads-support-t1338578.html#=
+"><IMG=20
+      id=3Dnabble.star3790781-0 style=3D"VERTICAL-ALIGN: middle" =
+alt=3D""=20
+      src=3D"http://www.nabble.com/images/icon_clear_rating.png" =
+border=3D0></A>=20
+      <SPAN id=3Dnabble.descriptor3790781></SPAN></P>
+      <P class=3Dmessage-actions2>
+      <SCRIPT>
+document.writeln('<a href=3D"/forum/Reply.jtp?post=3D3790781" =
+rel=3D"nofollow" target=3D"_top">Reply</a> | ');
+</SCRIPT>
+      <A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpm&amp;post=3D379=
+0781"=20
+      target=3D_top rel=3Dnofollow>Reply to Author</A>
+      <SCRIPT>
+if( Nabble.user =3D=3D 19981 ) {
+   =20
+	document.writeln('| <a href=3D"javascript:Nabble.deletePost(3790781)" =
+rel=3D"nofollow">Delete</a>');
+}
+
+</SCRIPT>
+       | <A href=3D"javascript: void =
+Nabble.setView('threaded',3790781);">View=20
+      Threaded</A> | <A=20
+      =
+href=3D"http://www.nabble.com/Re%3A-RFA%3A-generic-threads-support-p37907=
+81.html"=20
+      target=3D_top>Show Only this Message</A> </P></DIV>
+      <DIV class=3Dmessage-details>
+      <DIV id=3Dnabble.pending3790781></DIV>
+      <DIV class=3Dmessage-text id=3Dnabble.msgtxt3790781>Mark Mitchell =
+wrote:=20
+      <BR><BR>&gt;You also need documentation for this feature, =
+discussing both=20
+      the new <BR>&gt;configure switch, and what you have to do to =
+replace the=20
+      generic <BR>&gt;functions, and what the semantics of those =
+functions are,=20
+      so that people <BR>&gt;know how to replace them. <BR>&gt; &nbsp; =
+<BR>&gt;=20
+      <BR><BR>I've put the description of the functions as comments into =
+
+      <BR>gthr-generic.c and <BR>gthr-objc-generic.c, with a pointer in=20
+      install.texi. <BR><BR>I've followed the current gthread =
+implementations on=20
+      which functions <BR>can only return 0 or -1, and which can return =
+0 or=20
+      nonzero, although <BR>I have to say it looks a bit idiosyncratic.=20
+      <BR><BR>During the process of documenting the functions, I've =
+found that=20
+      <BR>__gthread_key_dtor is obsolete, so I removed the definition.=20
+      <BR><BR>Regression tested on i686-pc-linux-gnu X sh-elf, with and =
+without=20
+      <BR>--enable-threads=3Dgthreads. <BR>nm on libgcc.a shows that the =
+list of=20
+      symbols is unchanged compared to <BR>the baseline without=20
+      --enable-threads=3Dgthreads, but with this option, the =
+<BR>expected new=20
+      symbols are present. <BR><BR>2006-04-06 &nbsp;Antony King &lt;<A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;post=3D3=
+790781&amp;i=3D0"=20
+      target=3D_top=20
+      =
+rel=3Dnofollow>http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;p=
+ost=3D3790781&amp;i=3D0</A>&gt;=20
+      <BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; J"orn Rennecke =
+&lt;<A=20
+      =
+href=3D"http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;post=3D3=
+790781&amp;i=3D1"=20
+      target=3D_top=20
+      =
+rel=3Dnofollow>http://www.nabble.com/user/SendEmail.jtp?type=3Dpost&amp;p=
+ost=3D3790781&amp;i=3D1</A>&gt;=20
+      <BR><BR>&nbsp; &nbsp; &nbsp; &nbsp; * configure.ac: Recognize =
+'generic'=20
+      value for threads. <BR>&nbsp; &nbsp; &nbsp; &nbsp; Check for =
+existance of=20
+      a *.c and gthr-objc-*.c file for thread support. <BR>&nbsp; &nbsp; =
+&nbsp;=20
+      &nbsp; Substiture in extra_libgcc_srcs. <BR>&nbsp; &nbsp; &nbsp; =
+&nbsp; *=20
+      configure: Regenerate. <BR>&nbsp; &nbsp; &nbsp; &nbsp; * =
+Makefile.in=20
+      (LIB2ADD): Add @extra_libgcc_srcs@. <BR>&nbsp; &nbsp; &nbsp; =
+&nbsp; *=20
+      gthr-generic.h: New file. <BR>&nbsp; &nbsp; &nbsp; &nbsp; *=20
+      gthr-generic.c: New file. <BR>&nbsp; &nbsp; &nbsp; &nbsp; *=20
+      gthr-objc-generic.c: New file. <BR>&nbsp; &nbsp; &nbsp; &nbsp; *=20
+      doc/install.texi: Document --enable-threads=3Dgeneric =
+<BR><BR>Index:=20
+      doc/install.texi=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L doc/install.texi (revision =
+112638) -L=20
+      doc/install.texi (working copy) =
+doc/.svn/text-base/install.texi.svn-base=20
+      doc/install.texi <BR>--- doc/install.texi (revision 112638) =
+<BR>+++=20
+      doc/install.texi (working copy) <BR>@@ -935,6 +935,21 @@ like C++ =
+and=20
+      Java. &nbsp;The possibilities fo <BR>&nbsp;AIX thread support.=20
+      <BR>&nbsp;@item dce <BR>&nbsp;DCE thread support. <BR>+@item =
+generic=20
+      <BR>+Generic thread support. &nbsp;All the thread interface =
+primitives=20
+      used by the <BR>+libgcc/libobjc/libstdc++ will be provided as =
+out-of-line=20
+      weak stub functions <BR>+with the same functionality as you get =
+with=20
+      @option{--enable-threads=3Dsingle}. <BR>+This is useful when you =
+want to=20
+      build a toolchain that has, and can be <BR>+used to compile,=20
+      thread-agnostic libraries, so that a single toolchain <BR>+can =
+support=20
+      multiple OS environments for the same processor. <BR>+Without =
+adding=20
+      further object files / libraries, this toolchain can <BR>+compile =
+and link=20
+      objects that can run on a target without a threading <BR>+system. =
+<BR>+You=20
+      can also support a threaded environment by linking in an =
+additional=20
+      <BR>+object / library which replaces some or all of the functions =
+defined=20
+      in <BR>+@file{gthr-generic.c} / @file{gthr-objc-generic.c} with =
+functions=20
+      that <BR>+match the intended target environment. &nbsp;The data =
+type=20
+      definitions are <BR>+at the start of @file{gthr-generic.h}.=20
+      <BR>&nbsp;@item gnat <BR>&nbsp;Ada tasking support. &nbsp;For =
+non-Ada=20
+      programs, this setting is equivalent <BR>&nbsp;to @samp{single}.=20
+      &nbsp;When used in conjunction with the Ada run time, it =
+<BR>Index:=20
+      gthr-objc-generic.c=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L gthr-objc-generic.c (revision =
+0) -L=20
+      gthr-objc-generic.c (revision 0) .svn/empty-file =
+gthr-objc-generic.c=20
+      <BR>--- gthr-objc-generic.c (revision 0) <BR>+++ =
+gthr-objc-generic.c=20
+      (revision 0) <BR>@@ -0,0 +1,220 @@ <BR>+/* Threads compatibility =
+routines=20
+      for libobjc. &nbsp;*/ <BR>+/* Compile this one with gcc. &nbsp;*/ =
+<BR>+/*=20
+      Copyright (C) 1997, 1999, 2000, 2006 Free Software Foundation, =
+Inc. <BR>+=20
+      <BR>+This file is part of GCC. <BR>+ <BR>+GCC is free software; =
+you can=20
+      redistribute it and/or modify it under <BR>+the terms of the GNU =
+General=20
+      Public License as published by the Free <BR>+Software Foundation; =
+either=20
+      version 2, or (at your option) any later <BR>+version. <BR>+ =
+<BR>+GCC is=20
+      distributed in the hope that it will be useful, but WITHOUT ANY=20
+      <BR>+WARRANTY; without even the implied warranty of =
+MERCHANTABILITY or=20
+      <BR>+FITNESS FOR A PARTICULAR PURPOSE. &nbsp;See the GNU General =
+Public=20
+      License <BR>+for more details. <BR>+ <BR>+You should have received =
+a copy=20
+      of the GNU General Public License <BR>+along with GCC; see the =
+file=20
+      COPYING. &nbsp;If not, write to the Free <BR>+Software Foundation, =
+51=20
+      Franklin Street, Fifth Floor, Boston, MA <BR>+02110-1301, USA. =
+&nbsp;*/=20
+      <BR>+ <BR>+/* As a special exception, if you link this library =
+with other=20
+      files, <BR>+ &nbsp; some of which are compiled with GCC, to =
+produce an=20
+      executable, <BR>+ &nbsp; this library does not by itself cause the =
+
+      resulting executable <BR>+ &nbsp; to be covered by the GNU General =
+Public=20
+      License. <BR>+ &nbsp; This exception does not however invalidate =
+any other=20
+      reasons why <BR>+ &nbsp; the executable file might be covered by =
+the GNU=20
+      General Public License. &nbsp;*/ <BR>+ <BR>+#include "tconfig.h" =
+<BR>+=20
+      <BR>+#define __GTHR_WEAK __attribute__ ((weak)) <BR>+#define =
+_LIBOBJC=20
+      <BR>+ <BR>+/* ??? The objc thread types are defined in=20
+      ../libobjc/objc/thr.h, <BR>+ &nbsp; but we don't want the gcc core =
+to=20
+      depend on libobjc. &nbsp;*/ <BR>+typedef void * objc_thread_t;=20
+      <BR>+typedef struct objc_mutex *objc_mutex_t; <BR>+typedef struct=20
+      objc_condition *objc_condition_t; <BR>+#define=20
+      OBJC_THREAD_INTERACTIVE_PRIORITY &nbsp; &nbsp; &nbsp; &nbsp;2 =
+<BR>+=20
+      <BR>+#include "gthr.h" <BR>+ <BR>+#define UNUSED(x) x =
+ATTRIBUTE_UNUSED=20
+      <BR>+ <BR>+/* Just provide compatibility for mutex handling. =
+&nbsp;*/=20
+      <BR>+ <BR>+/* Thread local storage for a single thread */ =
+<BR>+static void=20
+      *thread_local_storage =3D 0; <BR>+ <BR>+/* Backend initialization =
+functions=20
+      */ <BR>+ <BR>+/* Initialize the threads subsystem. &nbsp;*/ =
+<BR>+int=20
+      <BR>+__generic_gxx_objc_init_thread_system (void) <BR>+{ <BR>+ =
+&nbsp;/* No=20
+      thread support available */ <BR>+ &nbsp;return -1; <BR>+} <BR>+ =
+<BR>+/*=20
+      Close the threads subsystem. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_close_thread_system (void) <BR>+{ <BR>+ =
+&nbsp;/*=20
+      No thread support available */ <BR>+ &nbsp;return -1; <BR>+} <BR>+ =
+<BR>+/*=20
+      Backend thread functions */ <BR>+ <BR>+/* Create a new thread of=20
+      execution. &nbsp;The thread starts executing by calling <BR>+ =
+&nbsp; FUNC=20
+      with ARG as its only argument. <BR>+ &nbsp; On success, a handle =
+for the=20
+      new thread is returned. <BR>+ &nbsp; On failure, zero is returned. =
+
+      &nbsp;*/ <BR>+objc_thread_t <BR>+__generic_gxx_objc_thread_detach =
+(void=20
+      UNUSED ((* func)(void *)), <BR>+ &nbsp;void * UNUSED(arg)) <BR>+{ =
+<BR>+=20
+      &nbsp;/* No thread support available */ <BR>+ &nbsp;return 0; =
+<BR>+} <BR>+=20
+      <BR>+/* Set the current thread's priority. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_thread_set_priority (int UNUSED(priority)) =
+<BR>+{=20
+      <BR>+ &nbsp;/* No thread support available */ <BR>+ &nbsp;return =
+-1;=20
+      <BR>+} <BR>+ <BR>+/* Return the current thread's priority. =
+&nbsp;*/=20
+      <BR>+int <BR>+__generic_gxx_objc_thread_get_priority (void) <BR>+{ =
+<BR>+=20
+      &nbsp;return OBJC_THREAD_INTERACTIVE_PRIORITY; <BR>+} <BR>+ =
+<BR>+/* Yield=20
+      our process time to another thread. &nbsp;*/ <BR>+void=20
+      <BR>+__generic_gxx_objc_thread_yield (void) <BR>+{ <BR>+ =
+&nbsp;return;=20
+      <BR>+} <BR>+ <BR>+/* Terminate the current thread. &nbsp;*/ =
+<BR>+int=20
+      <BR>+__generic_gxx_objc_thread_exit (void) <BR>+{ <BR>+ &nbsp;/* =
+No thread=20
+      support available */ <BR>+ &nbsp;/* Should we really exit the =
+program */=20
+      <BR>+ &nbsp;/* exit (&amp;__objc_thread_exit_status); */ <BR>+=20
+      &nbsp;return -1; <BR>+} <BR>+ <BR>+/* Returns an integer value =
+which=20
+      uniquely describes a thread. &nbsp;*/ <BR>+objc_thread_t=20
+      <BR>+__generic_gxx_objc_thread_id (void) <BR>+{ <BR>+ &nbsp;/* No =
+thread=20
+      support, use 1. &nbsp;*/ <BR>+ &nbsp;return (objc_thread_t) 1; =
+<BR>+}=20
+      <BR>+ <BR>+/* Sets the thread's objc local storage pointer. =
+&nbsp;*/=20
+      <BR>+int <BR>+__generic_gxx_objc_thread_set_data (void *value) =
+<BR>+{=20
+      <BR>+ &nbsp;thread_local_storage =3D value; <BR>+ &nbsp;return 0; =
+<BR>+}=20
+      <BR>+ <BR>+/* Returns the thread's objc local storage pointer. =
+&nbsp;*/=20
+      <BR>+void * <BR>+__generic_gxx_objc_thread_get_data (void) <BR>+{ =
+<BR>+=20
+      &nbsp;return thread_local_storage; <BR>+} <BR>+ <BR>+/* Backend =
+mutex=20
+      functions */ <BR>+ <BR>+/* Allocate a backend-specific mutex data =
+in=20
+      MUTEX-&gt;backend. &nbsp; <BR>+ &nbsp; Return 0 on success, -1 for =
+
+      failure. &nbsp;*/ <BR>+int <BR>+__generic_gxx_objc_mutex_allocate=20
+      (objc_mutex_t UNUSED(mutex)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} =
+<BR>+=20
+      <BR>+/* Deallocate backend-specific mutex data in =
+MUTEX-&gt;backend. <BR>+=20
+      &nbsp; Return 0 on success, -1 for failure. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_mutex_deallocate (objc_mutex_t =
+UNUSED(mutex))=20
+      <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Grab a lock on =
+MUTEX.=20
+      &nbsp;Return 0 on success. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_mutex_lock (objc_mutex_t UNUSED(mutex)) =
+<BR>+{=20
+      <BR>+ &nbsp;/* There can only be one thread, so we always get the =
+lock */=20
+      <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Try to grab a lock on =
+MUTEX.=20
+      &nbsp;Return 0 on success. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_mutex_trylock (objc_mutex_t UNUSED(mutex)) =
+<BR>+{=20
+      <BR>+ &nbsp;/* There can only be one thread, so we always get the =
+lock */=20
+      <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Unlock MUTEX. =
+&nbsp;Return 0 on=20
+      success. &nbsp;*/ <BR>+int <BR>+__generic_gxx_objc_mutex_unlock=20
+      (objc_mutex_t UNUSED(mutex)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} =
+<BR>+=20
+      <BR>+/* Backend condition mutex functions */ <BR>+ <BR>+/* =
+Allocate=20
+      backend-specific condition data in CONDITION-&gt;backend. <BR>+ =
+&nbsp;=20
+      Return 0 on success, -1 for failure. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_condition_allocate (objc_condition_t=20
+      UNUSED(condition)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+<BR>+/*=20
+      Deallocate backend-specific condition data in =
+CONDITION-&gt;backend. <BR>+=20
+      &nbsp; Return 0 for success. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_condition_deallocate (objc_condition_t=20
+      UNUSED(condition)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+<BR>+/* MUTEX=20
+      is a locked mutex. &nbsp;Atomically release MUTEX and wait on =
+<BR>+ &nbsp;=20
+      CONDITION, i.e. so that no other thread can observe a state after =
+<BR>+=20
+      &nbsp; the release of MUTEX but before this thread has blocked. =
+<BR>+=20
+      &nbsp; Then re-acquire a lock on MUTEX. <BR>+ &nbsp; Return 0 on =
+success.=20
+      &nbsp;*/ <BR>+int <BR>+__generic_gxx_objc_condition_wait =
+(objc_condition_t=20
+      UNUSED(condition), <BR>+ &nbsp; objc_mutex_t UNUSED(mutex)) <BR>+{ =
+<BR>+=20
+      &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Wake up all threads waiting =
+on=20
+      CONDITION. &nbsp;Return 0 on success. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_objc_condition_broadcast (objc_condition_t=20
+      UNUSED(condition)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+<BR>+/* Wake=20
+      up one thread waiting on CONDITION. &nbsp;Return 0 on success. =
+&nbsp;*/=20
+      <BR>+int <BR>+__generic_gxx_objc_condition_signal =
+(objc_condition_t=20
+      UNUSED(condition)) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>Index:=20
+      configure.ac=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L configure.ac (revision 112638) =
+-L=20
+      configure.ac (working copy) .svn/text-base/configure.ac.svn-base=20
+      configure.ac <BR>--- configure.ac (revision 112638) <BR>+++ =
+configure.ac=20
+      (working copy) <BR>@@ -1352,7 +1352,7 @@ case ${enable_threads} in =
+
+      <BR>&nbsp; &nbsp; &nbsp;target_thread_file=3D'single' <BR>&nbsp; =
+&nbsp;=20
+      &nbsp;;; <BR>&nbsp; &nbsp;aix | dce | gnat | irix | posix | =
+posix95 |=20
+      rtems | \ <BR>- &nbsp;single | solaris | vxworks | win32 ) <BR>+=20
+      &nbsp;single | solaris | vxworks | win32 | generic) <BR>&nbsp; =
+&nbsp;=20
+      &nbsp;target_thread_file=3D${enable_threads} <BR>&nbsp; &nbsp; =
+&nbsp;;;=20
+      <BR>&nbsp; &nbsp;*) <BR>@@ -1373,6 +1373,14 @@ if test =
+$thread_file !=3D=20
+      single; then <BR>&nbsp; &nbsp;rm -f gthr-default.h <BR>&nbsp; =
+&nbsp;echo=20
+      "#include \"gthr-${thread_file}.h\"" &gt; gthr-default.h =
+<BR>&nbsp;=20
+      &nbsp;gthread_flags=3D-DHAVE_GTHR_DEFAULT <BR>+ &nbsp;if test =
+$thread_file=20
+      !=3D posix; then <BR>+ &nbsp; &nbsp;if test -f=20
+      $srcdir/gthr-${thread_file}.c; then <BR>+ &nbsp; &nbsp;=20
+      &nbsp;extra_libgcc_srcs=3D$srcdir/gthr-${thread_file}.c <BR>+ =
+&nbsp;=20
+      &nbsp;fi <BR>+ &nbsp; &nbsp;if test -f =
+$srcdir/gthr-objc-${thread_file}.c;=20
+      then <BR>+ &nbsp; &nbsp; =
+&nbsp;extra_libgcc_srcs=3D"${extra_libgcc_srcs}=20
+      $srcdir/gthr-objc-${thread_file}.c" <BR>+ &nbsp; &nbsp;fi <BR>+ =
+&nbsp;fi=20
+      <BR>&nbsp;fi <BR>&nbsp;AC_SUBST(gthread_flags) <BR>&nbsp; <BR>@@ =
+-3514,6=20
+      +3522,7 @@ AC_SUBST(xmake_file) <BR>&nbsp;AC_SUBST(tmake_file)=20
+      <BR>&nbsp;AC_SUBST(extra_gcc_objs) =
+<BR>&nbsp;AC_SUBST(extra_headers_list)=20
+      <BR>+AC_SUBST(extra_libgcc_srcs) <BR>&nbsp;AC_SUBST(extra_objs)=20
+      <BR>&nbsp;AC_SUBST(extra_parts) <BR>&nbsp;AC_SUBST(extra_passes)=20
+      <BR>Index: gthr-generic.c=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L gthr-generic.c (revision 0) -L=20
+      gthr-generic.c (revision 0) .svn/empty-file gthr-generic.c <BR>--- =
+
+      gthr-generic.c (revision 0) <BR>+++ gthr-generic.c (revision 0) =
+<BR>@@=20
+      -0,0 +1,169 @@ <BR>+/* Generic threads supplementary =
+implementation. */=20
+      <BR>+/* Compile this one with gcc. &nbsp;*/ <BR>+/* Copyright (C) =
+1997,=20
+      1999, 2000, 2002, 2006 Free Software Foundation, Inc. <BR>+ =
+<BR>+This file=20
+      is part of GCC. <BR>+ <BR>+GCC is free software; you can =
+redistribute it=20
+      and/or modify <BR>+it under the terms of the GNU General Public =
+License as=20
+      published by <BR>+the Free Software Foundation; either version 2, =
+or (at=20
+      your option) <BR>+any later version. <BR>+ <BR>+GCC is distributed =
+in the=20
+      hope that it will be useful, <BR>+but WITHOUT ANY WARRANTY; =
+without even=20
+      the implied warranty of <BR>+MERCHANTABILITY or FITNESS FOR A =
+PARTICULAR=20
+      PURPOSE. &nbsp;See the <BR>+GNU General Public License for more =
+details.=20
+      <BR>+ <BR>+You should have received a copy of the GNU General =
+Public=20
+      License <BR>+along with GCC; see the file COPYING. &nbsp;If not, =
+write to=20
+      the Free <BR>+Software Foundation, 51 Franklin Street, Fifth =
+Floor,=20
+      Boston, MA <BR>+02110-1301, USA. &nbsp;*/ <BR>+ <BR>+/* As a =
+special=20
+      exception, if you link this library with other files, <BR>+ &nbsp; =
+some of=20
+      which are compiled with GCC, to produce an executable, <BR>+ =
+&nbsp; this=20
+      library does not by itself cause the resulting executable <BR>+ =
+&nbsp; to=20
+      be covered by the GNU General Public License. <BR>+ &nbsp; This =
+exception=20
+      does not however invalidate any other reasons why <BR>+ &nbsp; the =
+
+      executable file might be covered by the GNU General Public =
+License.=20
+      &nbsp;*/ <BR>+ <BR>+#define __GTHR_WEAK __attribute__ ((weak)) =
+<BR>+=20
+      <BR>+#include "tconfig.h" <BR>+#include "gthr.h" <BR>+ =
+<BR>+#ifndef=20
+      __gthr_generic_h <BR>+#error "Generic thread support package not=20
+      supported" <BR>+#endif <BR>+ <BR>+/* These are stub functions. =
+&nbsp;When=20
+      threading is available, a suitable set of definitions should be =
+linked in.=20
+      &nbsp;*/ <BR>+ <BR>+/* Return 1 if thread system is active, 0 if =
+not.=20
+      &nbsp;*/ <BR>+int <BR>+__generic_gxx_active_p (void) <BR>+{ <BR>+=20
+      &nbsp;return 0; <BR>+} <BR>+ <BR>+/* The following functions =
+should return=20
+      zero on success or the error <BR>+ &nbsp; number. &nbsp;If the =
+operation=20
+      is not supported, -1 is returned. <BR>+ <BR>+ &nbsp; =
+__generic_gxx_once=20
+      <BR>+ &nbsp; __generic_gxx_key_create <BR>+ &nbsp;=20
+      __generic_gxx_key_delete <BR>+ &nbsp; __generic_gxx_setspecific =
+<BR>+=20
+      &nbsp; __generic_gxx_mutex_lock <BR>+ &nbsp; =
+__generic_gxx_mutex_trylock=20
+      <BR>+ &nbsp; __generic_gxx_mutex_unlock <BR>+ &nbsp;=20
+      __generic_gxx_recursive_mutex_lock <BR>+ &nbsp;=20
+      __generic_gxx_recursive_mutex_trylock <BR>+ &nbsp;=20
+      __generic_gxx_recursive_mutex_unlock &nbsp;*/ <BR>+ <BR>+/* FUNC =
+is a=20
+      function that should be called without parameters. <BR>+ &nbsp; =
+*ONCE has=20
+      been initialized to __GTHREAD_ONCE_INIT and is otherwise only =
+<BR>+ &nbsp;=20
+      used in calls to __generic_gxx_once with FUNC as the second =
+parameter.=20
+      <BR>+ &nbsp; If __generic_gxx_once succeeds, FUNC will have been =
+called=20
+      exactly once <BR>+ &nbsp; since the initialization of ONCE through =
+any=20
+      number of calls of <BR>+ &nbsp; __generic_gxx_once with this pair =
+of ONCE=20
+      and FUNC values. &nbsp;*/ <BR>+int <BR>+__generic_gxx_once=20
+      (__gthread_once_t *once ATTRIBUTE_UNUSED, <BR>+ &nbsp; &nbsp;void=20
+      (*func)(void) ATTRIBUTE_UNUSED) <BR>+{ <BR>+ &nbsp;return -1; =
+<BR>+} <BR>+=20
+      <BR>+/* Assign a key to *KEY that can be used in calls to <BR>+ =
+&nbsp;=20
+      __generic_gxx_setspecific / __generic_gxx_getspecific. <BR>+ =
+&nbsp; If=20
+      DTOR is nonzero, and at thread exit the value associated with the =
+key=20
+      <BR>+ &nbsp; is nonzero, DTOR will be called at thread exit with =
+the value=20
+      associated <BR>+ &nbsp; with the key as its only argument. =
+&nbsp;*/=20
+      <BR>+int <BR>+__generic_gxx_key_create (__gthread_key_t *key=20
+      ATTRIBUTE_UNUSED, <BR>+ &nbsp;void (*dtor)(void *) =
+ATTRIBUTE_UNUSED)=20
+      <BR>+{ <BR>+ &nbsp;return -1; <BR>+} <BR>+ <BR>+/* KEY is a key =
+previously=20
+      allocated by __generic_gxx_key_create. <BR>+ &nbsp; Remove it from =
+the set=20
+      of keys known for this thread. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_key_delete (__gthread_key_t key =
+ATTRIBUTE_UNUSED)=20
+      <BR>+{ <BR>+ &nbsp;return -1; <BR>+} <BR>+ <BR>+/* Return =
+thread-specific=20
+      data associated with KEY. &nbsp;*/ <BR>+void *=20
+      <BR>+__generic_gxx_getspecific (__gthread_key_t key =
+ATTRIBUTE_UNUSED)=20
+      <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Set =
+thread-specific data=20
+      associated with KEY to PTR. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_setspecific (__gthread_key_t key =
+ATTRIBUTE_UNUSED,=20
+      <BR>+ &nbsp; &nbsp; &nbsp;const void *ptr ATTRIBUTE_UNUSED) <BR>+{ =
+<BR>+=20
+      &nbsp;return -1; <BR>+} <BR>+ <BR>+/* Initialize *MUTEX. &nbsp;*/=20
+      <BR>+void <BR>+__generic_gxx_mutex_init_function =
+(__gthread_mutex_t *mutex=20
+      ATTRIBUTE_UNUSED) <BR>+{ <BR>+} <BR>+ <BR>+/* Acquire a lock on =
+*MUTEX.=20
+      &nbsp;The behaviour is undefined if a lock on *MUTEX <BR>+ &nbsp; =
+has=20
+      already been acquired by the same thread. &nbsp;*/ <BR>+int=20
+      <BR>+__generic_gxx_mutex_lock (__gthread_mutex_t *mutex =
+ATTRIBUTE_UNUSED)=20
+      <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ <BR>+/* Try to acquire a =
+lock on=20
+      *MUTEX. &nbsp;If a lock on *MUTEX already exists, <BR>+ &nbsp; =
+return an=20
+      error code. &nbsp;*/ <BR>+int <BR>+__generic_gxx_mutex_trylock=20
+      (__gthread_mutex_t *mutex ATTRIBUTE_UNUSED) <BR>+{ <BR>+ =
+&nbsp;return 0;=20
+      <BR>+} <BR>+ <BR>+/* A lock on *MUTEX has previously been acquired =
+with=20
+      __generic_gxx_mutex_lock <BR>+ &nbsp; or =
+__generic_gxx_mutex_trylock.=20
+      &nbsp;Release the lock. &nbsp;*/ <BR>+int =
+<BR>+__generic_gxx_mutex_unlock=20
+      (__gthread_mutex_t *mutex ATTRIBUTE_UNUSED) <BR>+{ <BR>+ =
+&nbsp;return 0;=20
+      <BR>+} <BR>+ <BR>+/* Initialize *MUTEX. &nbsp;*/ <BR>+void=20
+      <BR>+__generic_gxx_recursive_mutex_init_function=20
+      (__gthread_recursive_mutex_t *mutex ATTRIBUTE_UNUSED) <BR>+{ =
+<BR>+} <BR>+=20
+      <BR>+/* Acquire a lock on *MUTEX. &nbsp;If a lock on *MUTEX has =
+already=20
+      been acquired by <BR>+ &nbsp; the same thread, succeed. &nbsp;*/ =
+<BR>+int=20
+      <BR>+__generic_gxx_recursive_mutex_lock =
+(__gthread_recursive_mutex_t=20
+      *mutex ATTRIBUTE_UNUSED) <BR>+{ <BR>+ &nbsp;return 0; <BR>+} <BR>+ =
+<BR>+/*=20
+      Try to acquire a lock on *MUTEX. &nbsp;If a lock on *MUTEX has =
+already=20
+      been <BR>+ &nbsp; acquired by the same thread, succeed. &nbsp;If =
+any other=20
+      lock on *MUTEX <BR>+ &nbsp; already exists, return an error code. =
+&nbsp;*/=20
+      <BR>+int <BR>+__generic_gxx_recursive_mutex_trylock=20
+      (__gthread_recursive_mutex_t *mutex ATTRIBUTE_UNUSED) <BR>+{ <BR>+ =
+
+      &nbsp;return 0; <BR>+} <BR>+ <BR>+/* A lock on *MUTEX has =
+previously been=20
+      acquired with <BR>+ &nbsp; __generic_gxx_recursive_mutex_lock or =
+<BR>+=20
+      &nbsp; __generic_gxx_recursive_mutex_trylock. &nbsp;Release the =
+lock.=20
+      &nbsp;*/ <BR>+int <BR>+__generic_gxx_recursive_mutex_unlock=20
+      (__gthread_recursive_mutex_t *mutex ATTRIBUTE_UNUSED) <BR>+{ <BR>+ =
+
+      &nbsp;return 0; <BR>+} <BR>Index: gthr-generic.h=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L gthr-generic.h (revision 0) -L=20
+      gthr-generic.h (revision 0) .svn/empty-file gthr-generic.h <BR>--- =
+
+      gthr-generic.h (revision 0) <BR>+++ gthr-generic.h (revision 0) =
+<BR>@@=20
+      -0,0 +1,371 @@ <BR>+/* Generic threads compatibility routines for =
+libgcc2=20
+      and libobjc. */ <BR>+/* Compile this one with gcc. &nbsp;*/ =
+<BR>+/*=20
+      Copyright (C) 1997, 1999, 2000, 2002, 2006 Free Software =
+Foundation, Inc.=20
+      <BR>+ <BR>+This file is part of GCC. <BR>+ <BR>+GCC is free =
+software; you=20
+      can redistribute it and/or modify <BR>+it under the terms of the =
+GNU=20
+      General Public License as published by <BR>+the Free Software =
+Foundation;=20
+      either version 2, or (at your option) <BR>+any later version. =
+<BR>+=20
+      <BR>+GCC is distributed in the hope that it will be useful, =
+<BR>+but=20
+      WITHOUT ANY WARRANTY; without even the implied warranty of=20
+      <BR>+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. =
+&nbsp;See the=20
+      <BR>+GNU General Public License for more details. <BR>+ <BR>+You =
+should=20
+      have received a copy of the GNU General Public License <BR>+along =
+with=20
+      GCC; see the file COPYING. &nbsp;If not, write to the Free =
+<BR>+Software=20
+      Foundation, 51 Franklin Street, Fifth Floor, Boston, MA =
+<BR>+02110-1301,=20
+      USA. &nbsp;*/ <BR>+ <BR>+/* As a special exception, if you link =
+this=20
+      library with other files, <BR>+ &nbsp; some of which are compiled =
+with=20
+      GCC, to produce an executable, <BR>+ &nbsp; this library does not =
+by=20
+      itself cause the resulting executable <BR>+ &nbsp; to be covered =
+by the=20
+      GNU General Public License. <BR>+ &nbsp; This exception does not =
+however=20
+      invalidate any other reasons why <BR>+ &nbsp; the executable file =
+might be=20
+      covered by the GNU General Public License. &nbsp;*/ <BR>+ =
+<BR>+#ifndef=20
+      __gthr_generic_h <BR>+#define __gthr_generic_h <BR>+ <BR>+#define=20
+      __GTHREADS 1 <BR>+ <BR>+#define __GTHREAD_ONCE_INIT 0 <BR>+#define =
+
+      __GTHREAD_MUTEX_INIT_FUNCTION __gthread_mutex_init_function =
+<BR>+#define=20
+      __GTHREAD_RECURSIVE_MUTEX_INIT_FUNCTION=20
+      __gthread_recursive_mutex_init_function <BR>+ <BR>+#ifdef =
+__cplusplus=20
+      <BR>+extern "C" { <BR>+#endif <BR>+ <BR>+/* Avoid depedency on =
+specific=20
+      headers. <BR>+ &nbsp; The general idea is that you dynamically =
+allocate=20
+      the required data <BR>+ &nbsp; structures, and a void * is used to =
+point=20
+      to this dynamically allocated <BR>+ &nbsp; data. &nbsp;If your=20
+      implementation can put all the required information in <BR>+ =
+&nbsp; the=20
+      void * itself, that's fine, too, of course. <BR>+ &nbsp; libstdc++ =
+
+      inherits from the mutex types, whcih is why they need to be <BR>+ =
+&nbsp;=20
+      wrapped up as structs. &nbsp;*/ <BR>+typedef void =
+*__gthread_key_t;=20
+      <BR>+typedef void *__gthread_once_t; <BR>+typedef struct =
+__gthread_mutex_s=20
+      { void *p; } __gthread_mutex_t; <BR>+typedef struct=20
+      __gthread_recursive_mutex_s { void *p; } =
+__gthread_recursive_mutex_t;=20
+      <BR>+ <BR>+/* We should always link with at least one definition, =
+so we=20
+      want strong <BR>+ &nbsp; references. &nbsp;The stub definitions =
+are weak=20
+      so that they can be overriden. &nbsp;*/ <BR>+#ifndef __GTHR_WEAK=20
+      <BR>+#define __GTHR_WEAK <BR>+#endif <BR>+ <BR>+extern int=20
+      __generic_gxx_active_p (void) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_once (__gthread_once_t *, void (*)(void)) =
+__GTHR_WEAK; <BR>+=20
+      <BR>+extern int __generic_gxx_key_create (__gthread_key_t *, <BR>+ =
+&nbsp;=20
+      &nbsp; void (*)(void *)) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_key_delete (__gthread_key_t key) __GTHR_WEAK; <BR>+=20
+      <BR>+extern void *__generic_gxx_getspecific (__gthread_key_t key)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int __generic_gxx_setspecific=20
+      (__gthread_key_t, const void *) __GTHR_WEAK; <BR>+ <BR>+extern =
+void=20
+      __generic_gxx_mutex_init_function (__gthread_mutex_t *) =
+__GTHR_WEAK; <BR>+=20
+      <BR>+extern int __generic_gxx_mutex_lock (__gthread_mutex_t *)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int __generic_gxx_mutex_trylock=20
+      (__gthread_mutex_t *) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_mutex_unlock (__gthread_mutex_t *) __GTHR_WEAK; =
+<BR>+=20
+      <BR>+extern void __generic_gxx_recursive_mutex_init_function=20
+      (__gthread_recursive_mutex_t *) __GTHR_WEAK; <BR>+ <BR>+extern int =
+
+      __generic_gxx_recursive_mutex_lock (__gthread_recursive_mutex_t *) =
+
+      __GTHR_WEAK; <BR>+ <BR>+extern int =
+__generic_gxx_recursive_mutex_trylock=20
+      (__gthread_recursive_mutex_t *) __GTHR_WEAK; <BR>+ <BR>+extern int =
+
+      __generic_gxx_recursive_mutex_unlock (__gthread_recursive_mutex_t =
+*)=20
+      __GTHR_WEAK; <BR>+ <BR>+#ifdef __cplusplus <BR>+} <BR>+#endif =
+<BR>+=20
+      <BR>+#ifdef _LIBOBJC <BR>+ <BR>+extern int=20
+      __generic_gxx_objc_init_thread_system (void) __GTHR_WEAK; <BR>+=20
+      <BR>+extern int __generic_gxx_objc_close_thread_system (void) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern objc_thread_t __generic_gxx_objc_thread_detach =
+(void=20
+      (*)(void *), void *) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_objc_thread_set_priority (int priority) __GTHR_WEAK; =
+<BR>+=20
+      <BR>+extern int __generic_gxx_objc_thread_get_priority (void) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern void __generic_gxx_objc_thread_yield (void) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern int __generic_gxx_objc_thread_exit (void) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern objc_thread_t __generic_gxx_objc_thread_id =
+(void)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int =
+__generic_gxx_objc_thread_set_data=20
+      (void *value) __GTHR_WEAK; <BR>+ <BR>+extern void=20
+      *__generic_gxx_objc_thread_get_data (void) __GTHR_WEAK; <BR>+ =
+<BR>+extern=20
+      int __generic_gxx_objc_mutex_allocate (objc_mutex_t) __GTHR_WEAK; =
+<BR>+=20
+      <BR>+extern int __generic_gxx_objc_mutex_deallocate (objc_mutex_t) =
+
+      __GTHR_WEAK; <BR>+ <BR>+extern int __generic_gxx_objc_mutex_lock=20
+      (objc_mutex_t) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_objc_mutex_trylock (objc_mutex_t) __GTHR_WEAK; <BR>+ =
+
+      <BR>+extern int __generic_gxx_objc_mutex_unlock (objc_mutex_t)=20
+      __GTHR_WEAK; <BR>+ <BR>+extern int =
+__generic_gxx_objc_condition_allocate=20
+      (objc_condition_t) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_objc_condition_deallocate (objc_condition_t) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern int __generic_gxx_objc_condition_wait =
+(objc_condition_t,=20
+      objc_mutex_t) __GTHR_WEAK; <BR>+ <BR>+extern int=20
+      __generic_gxx_objc_condition_broadcast (objc_condition_t) =
+__GTHR_WEAK;=20
+      <BR>+ <BR>+extern int __generic_gxx_objc_condition_signal=20
+      (objc_condition_t) __GTHR_WEAK; <BR>+ <BR>+/* Backend =
+initialization=20
+      functions */ <BR>+ <BR>+/* Initialize the threads subsystem. =
+&nbsp;*/=20
+      <BR>+static inline int <BR>+__gthread_objc_init_thread_system =
+(void)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_init_thread_system =
+(); <BR>+}=20
+      <BR>+ <BR>+/* Close the threads subsystem. &nbsp;*/ <BR>+static =
+inline int=20
+      <BR>+__gthread_objc_close_thread_system (void) <BR>+{ <BR>+ =
+&nbsp;return=20
+      __generic_gxx_objc_close_thread_system (); <BR>+} <BR>+ <BR>+/* =
+Backend=20
+      thread functions */ <BR>+ <BR>+/* Create a new thread of =
+execution.=20
+      &nbsp;*/ <BR>+static inline objc_thread_t=20
+      <BR>+__gthread_objc_thread_detach (void (* func)(void *), void * =
+arg)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_thread_detach (func, =
+arg);=20
+      <BR>+} <BR>+ <BR>+/* Set the current thread's priority. &nbsp;*/=20
+      <BR>+static inline int <BR>+__gthread_objc_thread_set_priority =
+(int=20
+      priority) <BR>+{ <BR>+ &nbsp;return =
+__generic_gxx_objc_thread_set_priority=20
+      (priority); <BR>+} <BR>+ <BR>+/* Return the current thread's =
+priority.=20
+      &nbsp;*/ <BR>+static inline int =
+<BR>+__gthread_objc_thread_get_priority=20
+      (void) <BR>+{ <BR>+ &nbsp;return =
+__generic_gxx_objc_thread_get_priority=20
+      (); <BR>+} <BR>+ <BR>+/* Yield our process time to another thread. =
+
+      &nbsp;*/ <BR>+static inline void <BR>+__gthread_objc_thread_yield =
+(void)=20
+      <BR>+{ <BR>+ &nbsp;__generic_gxx_objc_thread_yield (); <BR>+} =
+<BR>+=20
+      <BR>+/* Terminate the current thread. &nbsp;*/ <BR>+static inline =
+int=20
+      <BR>+__gthread_objc_thread_exit (void) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_objc_thread_exit (); <BR>+} <BR>+ <BR>+/* Returns an =
+integer=20
+      value which uniquely describes a thread. &nbsp;*/ <BR>+static =
+inline=20
+      objc_thread_t <BR>+__gthread_objc_thread_id (void) <BR>+{ <BR>+=20
+      &nbsp;return __generic_gxx_objc_thread_id (); <BR>+} <BR>+ <BR>+/* =
+Sets=20
+      the thread's local storage pointer. &nbsp;*/ <BR>+static inline =
+int=20
+      <BR>+__gthread_objc_thread_set_data (void *value) <BR>+{ <BR>+=20
+      &nbsp;return __generic_gxx_objc_thread_set_data (value); <BR>+} =
+<BR>+=20
+      <BR>+/* Returns the thread's local storage pointer. &nbsp;*/ =
+<BR>+static=20
+      inline void * <BR>+__gthread_objc_thread_get_data (void) <BR>+{ =
+<BR>+=20
+      &nbsp;return __generic_gxx_objc_thread_get_data (); <BR>+} <BR>+ =
+<BR>+/*=20
+      Backend mutex functions */ <BR>+ <BR>+/* Allocate a mutex. =
+&nbsp;*/=20
+      <BR>+static inline int <BR>+__gthread_objc_mutex_allocate =
+(objc_mutex_t=20
+      mutex) <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_mutex_allocate =
+
+      (mutex); <BR>+} <BR>+ <BR>+/* Deallocate a mutex. &nbsp;*/ =
+<BR>+static=20
+      inline int <BR>+__gthread_objc_mutex_deallocate (objc_mutex_t =
+mutex)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_mutex_deallocate =
+(mutex);=20
+      <BR>+} <BR>+ <BR>+/* Grab a lock on a mutex. &nbsp;*/ <BR>+static =
+inline=20
+      int <BR>+__gthread_objc_mutex_lock (objc_mutex_t mutex) <BR>+{ =
+<BR>+=20
+      &nbsp;return __generic_gxx_objc_mutex_lock (mutex); <BR>+} <BR>+ =
+<BR>+/*=20
+      Try to grab a lock on a mutex. &nbsp;*/ <BR>+static inline int=20
+      <BR>+__gthread_objc_mutex_trylock (objc_mutex_t mutex) <BR>+{ =
+<BR>+=20
+      &nbsp;return __generic_gxx_objc_mutex_trylock (mutex); <BR>+} =
+<BR>+=20
+      <BR>+/* Unlock the mutex */ <BR>+static inline int=20
+      <BR>+__gthread_objc_mutex_unlock (objc_mutex_t mutex) <BR>+{ <BR>+ =
+
+      &nbsp;return __generic_gxx_objc_mutex_unlock (mutex); <BR>+} <BR>+ =
+<BR>+/*=20
+      Backend condition mutex functions */ <BR>+ <BR>+/* Allocate a =
+condition.=20
+      &nbsp;*/ <BR>+static inline int =
+<BR>+__gthread_objc_condition_allocate=20
+      (objc_condition_t condition) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_objc_condition_allocate (condition); <BR>+} <BR>+ =
+<BR>+/*=20
+      Deallocate a condition. &nbsp;*/ <BR>+static inline int=20
+      <BR>+__gthread_objc_condition_deallocate (objc_condition_t =
+condition)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_condition_deallocate=20
+      (condition); <BR>+} <BR>+ <BR>+/* Wait on the condition */ =
+<BR>+static=20
+      inline int <BR>+__gthread_objc_condition_wait (objc_condition_t =
+condition,=20
+      objc_mutex_t mutex) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_objc_condition_wait (condition, mutex); <BR>+} <BR>+ =
+<BR>+/*=20
+      Wake up all threads waiting on this condition. &nbsp;*/ =
+<BR>+static inline=20
+      int <BR>+__gthread_objc_condition_broadcast (objc_condition_t =
+condition)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_objc_condition_broadcast ( =
+
+      condition); <BR>+} <BR>+ <BR>+/* Wake up one thread waiting on =
+this=20
+      condition. &nbsp;*/ <BR>+static inline int=20
+      <BR>+__gthread_objc_condition_signal (objc_condition_t condition) =
+<BR>+{=20
+      <BR>+ &nbsp;return __generic_gxx_objc_condition_signal =
+(condition); <BR>+}=20
+      <BR>+ <BR>+#else /* !_LIBOBJC */ <BR>+ <BR>+static inline int=20
+      <BR>+__gthread_active_p (void) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_active_p (); <BR>+} <BR>+ <BR>+static inline int=20
+      <BR>+__gthread_once (__gthread_once_t *once, void (*func)(void)) =
+<BR>+{=20
+      <BR>+ &nbsp;return __generic_gxx_once (once, func); <BR>+} <BR>+=20
+      <BR>+static inline int <BR>+__gthread_key_create (__gthread_key_t =
+*key,=20
+      void (*dtor)(void *)) <BR>+{ <BR>+ &nbsp;return =
+__generic_gxx_key_create=20
+      (key, dtor); <BR>+} <BR>+ <BR>+static inline int =
+<BR>+__gthread_key_delete=20
+      (__gthread_key_t key) <BR>+{ <BR>+ &nbsp;return =
+__generic_gxx_key_delete=20
+      (key); <BR>+} <BR>+ <BR>+static inline void * =
+<BR>+__gthread_getspecific=20
+      (__gthread_key_t key) <BR>+{ <BR>+ &nbsp;return =
+__generic_gxx_getspecific=20
+      (key); <BR>+} <BR>+ <BR>+static inline int =
+<BR>+__gthread_setspecific=20
+      (__gthread_key_t key, const void *ptr) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_setspecific (key, ptr); <BR>+} <BR>+ <BR>+static =
+inline void=20
+      <BR>+__gthread_mutex_init_function (__gthread_mutex_t *mutex) =
+<BR>+{ <BR>+=20
+      &nbsp;__generic_gxx_mutex_init_function (mutex); <BR>+} <BR>+ =
+<BR>+static=20
+      inline int <BR>+__gthread_mutex_lock (__gthread_mutex_t * mutex) =
+<BR>+{=20
+      <BR>+ &nbsp;return __generic_gxx_mutex_lock (mutex); <BR>+} <BR>+=20
+      <BR>+static inline int <BR>+__gthread_mutex_trylock =
+(__gthread_mutex_t *=20
+      mutex) <BR>+{ <BR>+ &nbsp;return __generic_gxx_mutex_trylock =
+(mutex);=20
+      <BR>+} <BR>+ <BR>+static inline int <BR>+__gthread_mutex_unlock=20
+      (__gthread_mutex_t * mutex) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_mutex_unlock (mutex); <BR>+} <BR>+ <BR>+static =
+inline void=20
+      <BR>+__gthread_recursive_mutex_init_function =
+(__gthread_recursive_mutex_t=20
+      *mutex) <BR>+{ <BR>+ =
+&nbsp;__generic_gxx_recursive_mutex_init_function=20
+      (mutex); <BR>+} <BR>+ <BR>+static inline int=20
+      <BR>+__gthread_recursive_mutex_lock (__gthread_recursive_mutex_t * =
+mutex)=20
+      <BR>+{ <BR>+ &nbsp;return __generic_gxx_recursive_mutex_lock =
+(mutex);=20
+      <BR>+} <BR>+ <BR>+static inline int =
+<BR>+__gthread_recursive_mutex_trylock=20
+      (__gthread_recursive_mutex_t * mutex) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_recursive_mutex_trylock (mutex); <BR>+} <BR>+ =
+<BR>+static=20
+      inline int <BR>+__gthread_recursive_mutex_unlock=20
+      (__gthread_recursive_mutex_t * mutex) <BR>+{ <BR>+ &nbsp;return=20
+      __generic_gxx_recursive_mutex_unlock (mutex); <BR>+} <BR>+ =
+<BR>+#endif /*=20
+      _LIBOBJC */ <BR>+ <BR>+#endif /* __gthr_generic_h */ <BR>Index:=20
+      Makefile.in=20
+      =
+<BR>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=20
+      <BR>/usr/bin/diff -p -d -F^( -u -L Makefile.in (revision 112638) =
+-L=20
+      Makefile.in (working copy) .svn/text-base/Makefile.in.svn-base =
+Makefile.in=20
+      <BR>--- Makefile.in (revision 112638) <BR>+++ Makefile.in (working =
+copy)=20
+      <BR>@@ -1390,7 +1390,7 @@ xlimits.h: glimits.h limitx.h limity.h=20
+      <BR>&nbsp;# <BR>&nbsp;# Build libgcc.a. <BR>&nbsp; <BR>-LIB2ADD =
+=3D=20
+      $(LIB2FUNCS_EXTRA) <BR>+LIB2ADD =3D $(LIB2FUNCS_EXTRA) =
+@extra_libgcc_srcs@=20
+      <BR>&nbsp;LIB2ADD_ST =3D $(LIB2FUNCS_STATIC_EXTRA) <BR>&nbsp;=20
+      <BR>&nbsp;libgcc.mk: config.status Makefile mklibgcc $(LIB2ADD)=20
+      $(LIB2ADD_ST) specs \ <BR></DIV>
+      <SCRIPT>
+if (Nabble.searchterms !=3D null && Nabble.searchterms.length > 0) {
+	Nabble.hilt(Nabble.searchterms, Nabble.get("nabble.msgtxt3790781"));
+}
+</SCRIPT>
+      </DIV></TD></TR></TBODY></TABLE>
+<FORM><INPUT id=3Dnabble.back type=3Dhidden value=3Dno></FORM>
+<SCRIPT type=3Dtext/javascript><!--
+if( Nabble.ads ) {
+	Nabble.ads();
+}
+//--></SCRIPT>
+
+<DIV id=3Dnabble.searchResults></DIV>
+<SCRIPT>
+//Nabble.gquery =3D 'test';
+//Nabble.topicDumpSearch =3D true;
+if (Nabble.gquery!=3Dnull) {
+	if (Nabble.topicDumpSearch) {
+		Nabble.get('nabble.searchResults').innerHTML =3D '<h1>&nbsp;Other =
+threads matching \"<strong>'+Nabble.gquery+'</strong>\":</h1>'+
+		'<p style=3D\"margin-left: 3em;\">looking for matching =
+threads...</p>';
+		=
+Nabble.loadScript('/forum/TopicDump$SearchJs.jtp?query=3D'+encodeURICompo=
+nent(Nabble.gquery)+'&topic=3D1338578');
+		Nabble.setVar('prev',null);
+	} else {
+		Nabble.setVar('prev',
+			'<big><a id=3D"nabble.prev_search" =
+href=3D"/forum/Search.jtp?query=3D'+encodeURIComponent(Nabble.gquery)+'">=
+Search Nabble for "<b>'+Nabble.gquery+'</b>"</a> | '+
+			'<a href=3D"http://www.nabble.com/gcc---patches-f1160.html">View all =
+discussions in this forum</a></big>'
+		);
+	}
+}
+
+if( Nabble.prev )
+	Nabble.writeReturnToLink(Nabble.prev);
+
+</SCRIPT>
+
+<SCRIPT>
+Nabble.copyright =3D "&copy; 2005-2006 Nabble, Inc.";
+</SCRIPT>
+
+<TABLE class=3D"footer-table shaded-bg-color">
+  <TBODY>
+  <TR>
+    <TD class=3Dfooter-left>Start a <A href=3D"http://www.nabble.com/"=20
+      target=3D_top>free forum or mailing list archive</A> on Nabble =
+</TD>
+    <TD class=3Dfooter-right><A =
+href=3D"http://www.nabble.com/help/Index.jtp"=20
+      target=3D_top>Help</A> - <A =
+href=3D"http://www.nabble.com/more/PoweredBy.jtp"=20
+      target=3D_top rel=3Dnofollow>Powered by</A> - <A=20
+      href=3D"http://www.nabble.com/user/Terms.jtp" target=3D_top>Terms =
+of Use</A> -=20
+      <A href=3D"http://www.nabble.com/Nabble-Support-f1.html" =
+target=3D_top>Nabble=20
+      Support</A> </TD></TR></TBODY></TABLE></DIV>
+<DIV style=3D"FONT-SIZE: 0.9em; TEXT-ALIGN: center">
+<SCRIPT>
+			document.write(Nabble.copyright);
+			</SCRIPT>
+</DIV>
+<SCRIPT>Nabble.addHandlers();</SCRIPT>
+
+<SCRIPT>
+(function(){
+	if( Nabble.cur ) {
+		var t =3D Nabble.get( "nabble.i" + Nabble.cur );
+		if( t ) {
+			t.style.visibility =3D "visible";
+		}
+	}
+	if( Nabble.gquery!=3Dnull ) {
+		var t =3D Nabble.get("nabble.searchQuery");
+		t.value =3D Nabble.gquery;
+		Nabble.selectOption(Nabble.get("nabble.searchSelect"),"n");
+		if( !Nabble.notRed ) {
+			t.className +=3D "error-message";
+			t.style.borderStyle =3D "solid";
+			t.style.borderWidth =3D "3px";
+			t.style.backgroundColor =3D =
+Nabble.currentStyle(Nabble.get('nabble')).backgroundColor;
+		}
+	}
+})();
+</SCRIPT>
+
+<SCRIPT=20
+src=3D"http://www.nabble.com/forum/TopicDump$Js.jtp?topic=3D1338578&amp;r=
+ating=3D2&amp;forum=3D1160&amp;p=3D3578549&amp;p=3D3698922&amp;p=3D372605=
+6&amp;p=3D3727549&amp;p=3D3732233&amp;p=3D3790781&amp;u=3D19981&amp;u=3D1=
+9067&amp;u=3D19981&amp;u=3D19067&amp;u=3D19981&amp;u=3D19981"></SCRIPT>
+
+<SCRIPT>
+	Nabble.analytics();
+</SCRIPT>
+</DIV></DIV></BODY></HTML>
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: http://www.nabble.com/images/logo_nabble_forums.png
+
+iVBORw0KGgoAAAANSUhEUgAAAHAAAAAOCAIAAAB4qg+tAAAABGdBTUEAAK/INwWK6QAAABl0RVh0
+U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAdDSURBVHja7NhVrFXXFgbge+DgLsXdPRCC
+uwV3KyRFHqC4BbcQnECAByBYcCcQtCVBi6ZYSQsUgru7+/1yVu7O7jkceh7uQx86H1bGnmvMOYf8
+4x9z7YgvUeM//444jIiIiL/VifzGAoGOOfONM8Lfhua/OvnVreJo/T88/ZHhDrx///7GjRvx48eP
+Fy9eunTpkiVL9uLFizt37iROnNirlClTZsiQIVqAnj59ev/+fZrfffddwoQJgxx8/vz52rVrnz59
+Sp8+fapUqYIl5t+8eXPz5s0ECRJQtiS20NC0lqanPd++fUtgUmRkZIoUKRhG4Z8bVpZ9jhoEUWjc
+uHH27NlTp079/fffm9y9e3eFChUyZsyYJ0+eWbNmfYkx9u3bV6xYsUKFCv3222+hyY8fP3bv3l3U
+Ro8eHa58+fLlRo0aifK8efOCc8Pffv7fIL98+bJHjx4syZQpU5kyZerXr1+1alWh/OGHH6Q22qqY
+Vv3tZEiONhkyIDbDHj9+/OWb4y8BFYhz585VqlQpadKkULBkyRKTR44c4cmIESNev34drLl+/frd
+u3dDW0ydOjVJkiS///47VyE6pJMlS5a+ffuSnzx5ElI+cOAA0E2YMCE08+jRowcPHoSbHsiOaNWq
+lZRv27ZN3Zw8ebJp06ZsC94qi5Bv4SF4/vz5l7iNDx8+wH4gh1wLtvK8fft2ICuO8IC2bt26du3a
+x48fj23byHCoKvacOXOmSZOmbdu2ly5dGjt2bL169UqUKGEGQkWNk4sWLbp37x4eKFmyJBDBMsR5
+9fPPP48bN05ofvzxR+g2Lw00hw8fDuZly5YlZM6cGW8kT55c/ToRAyxcuFC8HN2wYcNu3bolSpQo
+MEs6lUXWrFmpMWDz5s2UO3fuPHv2bKmaP3/+sWPHbFKlSpUBAwZcuXJl5syZuEWt/PHHH462Gztx
+S9euXU+fPr19+3ZIHzhw4IULFxYsWECuXLnyunXrRH/w4MHqknKBAgWGDRvmld2mTZt25syZwoUL
+s7Zdu3Y8DTGMVU6vU6eOnYcMGSIysZZ8kAEQq1Wrlq337t3rLSOwZL58+ebMmePt9OnTTW7cuHHH
+jh2EFStWmFy8eLFMNGjQYNmyZQpTcE+cOMH/0qVLOw9+FT5lFlA+deoUh6dMmUKeNGkSdrbb+vXr
+06ZNG+KBEOJ69eploaSizt69e4Pkpk2bAKRgwYJ79uxZuXIl//v06cPCQYMG0UQI/fv3J2zdunXU
+qFGEDRs24BkJJrMKrjt16kSWmy1btmAqaZs7d64Iij7BoTaReHW5dOlSvrAtmlVB4U+ePJl3ntEQ
+Gu+rxCp11apV69ix44wZM3755ZdQA6lRowZTBJ1xfj58+DBIiQGtTBk/frxQ7ty5U6UoqOrVq0vJ
+mDFjBGXt2rWYMcAm61W6fNj56tWrf/75p5T89NNPVsW8CeTNm1czfPfuHQdw0a5du3r27MmS9u3b
+Y3x48ap58+bQ5BS1hWcwA7KmLAq5c+cGWDxDDa1LvD2xh7UQzRIeWSWIwu0VHYW4fPlya7kDFjHj
+wxLwVPhDhw5lT6zXJiN+1Aha7ciRI1WrohAIBpn0fPXq1erVq8uVKwdc/MebnmQGUeBVcDf4FDXQ
+aLAVAL6JGhFRQ78m41aRsrkZp1CO1rsDSwCcVziajEw9g7MC56VNbjgvVcwoFzUCTAQHkdElWezI
+rCIEO5AZEFwkAgUGtGjRQi+BGDxQvHhxmJCSmDEVR9FULsgwfD5eTGzy0NMZKl0pnT9//tatW9jN
+WwUFRxMnTkRewd3IqY5H6lBJAWGJuIWsZB/eeBQ1zp4962BhpSwHdNSayiX369dP5hAr1g7wGwwR
+V8sEoQQoXEkuWrQo3B08eDAIB4wg/Vy5clG2FTPCkwGS5tl56NAhMn3zBPE1HwQ6EFhF9qSjKNUE
+JK1Zs4Y7HIwWIhzSpk0brQJIeR0toH/p8ji7Zs2a2J3nHTp04A8rUarMB3SJyACQe3bUMUQBfHAZ
+l9xsWrZsqRbooxhr1Z0bj4S7eCHBVatWiay1IiLn+/fv//XXXy0sX7683eQg6E6BJSLepUsXZlDO
+li0brwJi4TDmBUxVb1WOHDk0HJmoWLEiw5QwYgk0YdnpWg3OQQjYkHn4Gn7JvEP9XGCY6yCW4Atl
+xNqsWTPXNfljgP31w/AQIU0R9Izt/hQR+vQMbumSCYxyBV9aIRkM3aV0Oph69uyZA3AN4zyPHj0a
+3GyAmj86hhJr0qSJXiHzUClM0ETghn4V7M8f8YKCIkWKXLx4kQ+QhfIcEfo8k8jDhw+rEsqYIX/+
+/LAZAoGOAfvSXLduXfOuOJo+tlFYQlCqVKlADTVDkGZtRve3Z8CPnGInfT3AcdIGtmwAUgmWMwLX
+hEw3l5UQmzNMj8I/0VEZ/lUS/i0f82sv/Osz5pfoNz4Wvr3VV2eiEWhsX71x/z6Oo7VxcSfuG0b8
+++fI//fPkf8KMACg7cDo7nzcTgAAAABJRU5ErkJggg==
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: http://www.nabble.com/images/icon_tri.png
+
+iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAABGdBTUEAAK/INwWK6QAAABl0RVh0
+U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAFfSURBVHjajJJPSwJBGMafmV2jjh081bFb
+1KkPEEQQQZDhSerarUMX6RAEQR+jo4cIPARd6tTBiwRKZqbZkhnqmpG7rrvun9lpVsKCzHrhmZnD
+++N555khnHMUjg4Tvq4xq5DbWTi70DCiaLD0VBUgZIvIoXxmdTHyJ9BVFKFHuLo2xT0neRdZSiix
+5fCvALNM2I067JcqnFcVfs+McULyte216FAgKN914RoGnGYTTqMGprXD8LzT1u5Gsru3Hv4BgAeU
+D+448NrvcGrC7akEt3QTqZfvH4qb87GgTR4A5NNJqOMxPOsmyrqFosshYhubnhyfW4nOTnwBIl5m
+dFCVKBSTIWt4aPlgVJaOaYgeJLNqY+Dg2zasSgXXHkfaZagLH0kiJ5JE91NvZvn7pfuAlr9Fumvi
+XMxDKbmkEuJpw80Oi7UP5ERzykdaHOMZh12NejgEXyMuk5lg/48+BBgAwUrL443pCz4AAAAASUVO
+RK5CYII=
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: http://www.nabble.com/images/icon_unflagged.png
+
+iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAABGdBTUEAAK/INwWK6QAAABl0RVh0
+U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAEQSURBVHjanNPLSoZQEAfwv7dACcJ1T9ED
+uA+CtkE9W/Ct2voArXwAV0EbxQt4I7yhKX5esDlCi8D0w4EB0fmdmeNRbp5nbIXrujdU89i27VNR
+FLeapt39PhPXgG3b15IkPdDlM+V93/dXdV2zhT4IYxNzHPc1TZM8jiMIgroiSRJYlvWnbhUTkAnj
+fD4vuGka+L6PLMv28TAMS3ZdhzzPEccxgiBAWZb7mAUbmfYIz/MQRRHCMFymuAizYtM04TgOqqoK
+aRuvqqqeLsJsTOr6RqOeDMN4X6tZxaIoLi9L1/WXrW+AX7spCAJkWf7GTvD/dVYUZTqMKY9hnufZ
+OR8bm51rmqY4hOnHYPhzD/8IMAD4Epx+E0BMqgAAAABJRU5ErkJggg==
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: http://www.nabble.com/images/icon_star_blue.png
+
+iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAABGdBTUEAAK/INwWK6QAAABl0RVh0
+U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAGISURBVHjafJFBLwNBFMffTGd2t9vd2Xbb
+oqVNiPZA1KEiHBwEB+HswDdw7MlH6NU36MWpjoKDXpoIEg4SkjpsRUQkEoSg1e3smhUkuuIlL+/l
+vd/M/PMfNL+2AZ1BQ+aMV+3Xh0rnjsAf4diN0leb6txh3+1qZFWUPi9V3Vz994CQkuett6Kkx4GZ
+3eD1yURP/pckEmQlp91adLkdaTefsRJOgq6FwFApSBFFt+r1Y1mijsnUx9442yIIk6LrNJaVaBrj
+AIWQEgAjSMHUKMQ0DcazPUAQx5uVE9ZlqEUsnKgRRZ9tPlxzwQmYgBnyYBm6mARB4kJ575hPDKVm
+tw8vavjLvqqissLr/Y2AZYjrIgUcN2TYPTiDfDZZ2Dm6qP6yVaYYHOGBB+oK+syYkEUDCCSK/f8g
+ZjlZU8C6vILLmzsXIYDJ4TRKRHXg3Mn5bCXYzdw/PnGM3PLUaH9sbmww1ua8fGrd8sa7nfG9EGXq
++kAivLB/ar2c138ULK3MjGjNVnv6e/AhwADVz3R1gHvCBwAAAABJRU5ErkJggg==
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: http://www.nabble.com/images/icon_clear_rating.png
+
+iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAB6ElEQVR4nK2SzW4SURiGnwEGmQoF
+GSzEmpSY0PqzKJpZ63gHXAKr2bjhEryD7lzMprpy26WuSlxPIrVgrFUTClgqSmcaygQYZlyUodg2
+bRe+m5N853ve8/0cAV+a8QzYAFR0ZQvNWAIKQGKSsYGubHFGwozB2tNctPRht2cC5UBAKMzHJCRJ
+ZDz26B72cBy3DBTRlfpFBptvtXvqu+oRO50hB6MwkYiI63rcCIvEE3Ps7x/y7fsvc1olEPJ5ORpS
+TdtlaUFiEAzzY6dHfe8PruuVAUKhoLqynGE5l0l83W2X0YwsumIF/P6zcpimOeLn0ZjOscvYcXFd
+zwRK6Mpzxxnna59bpiBAIj6XAEoAgUkBqhwTaVkOTcuhYY1Jp+dJJm8mgDKasTopubTX6JJOzwMU
+/zEQBIEvBwNqLZtOt0+9/hvL6vsdZgHQlTe2PUSSwtOYPwP1/bbpJ5eByvScmTiasSpFRMRQcBry
+DfKTF87t+YxeLqTj/u4qpwZXg6AZ67dTscLdxVu02xbAa5j9B1fAshwtruQy9O0h1Vqz4rx68hhO
+h3gpnJKjxQf372DboxPYcVX/+nIDzVhLydHio4eL9I8HbNcaJ7CuWNczAJLJKL3egE/V8zBcYwbi
+i4/rnuflL4L/i/4CuqjSXloiMFoAAAAASUVORK5CYII=
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: text/css;
+	charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://www.nabble.com/site.css
+
+BODY {
+	FONT-FAMILY: tahoma,geneva,helvetica,arial,sans-serif
+}
+INPUT {
+	FONT-FAMILY: tahoma,geneva,helvetica,arial,sans-serif
+}
+TEXTAREA {
+	FONT-FAMILY: tahoma,geneva,helvetica,arial,sans-serif
+}
+SELECT {
+	FONT-FAMILY: tahoma,geneva,helvetica,arial,sans-serif
+}
+BODY {
+	FONT-SIZE: 0.85em; MARGIN: 0.8em
+}
+TABLE .nabble {
+	FONT-SIZE: 0.85em; MARGIN: 0.8em
+}
+CODE {
+	FONT-SIZE: 1.1em
+}
+.small {
+	FONT-SIZE: 0.9em
+}
+.nabble {
+	COLOR: #000000
+}
+.nabble TABLE {
+	COLOR: #000000
+}
+.nabble .info-message TH {
+	COLOR: #000000
+}
+.nabble H1 {
+	COLOR: #333333
+}
+.nabble .light-black {
+	COLOR: #333333
+}
+.nabble .important {
+	COLOR: #cc0000
+}
+.nabble TH {
+	COLOR: #666666
+}
+.nabble .form-label {
+	COLOR: #666666
+}
+.nabble .weak-color {
+	COLOR: #666666
+}
+.nabble {
+	BACKGROUND: #ffffff
+}
+.nabble .no-bg-color {
+	BACKGROUND: #ffffff
+}
+.nabble .shaded-bg-color {
+	BACKGROUND: #eeeeee
+}
+.nabble TH {
+	BACKGROUND: #dddddd
+}
+.nabble .dark-bg-color {
+	BACKGROUND: #dddddd
+}
+.nabble .highlight {
+	BACKGROUND: #ffff66
+}
+.nabble .error-message {
+	BACKGROUND: #ffffcc
+}
+.nabble .info-message {
+	BACKGROUND: #ffffcc
+}
+.nabble .light-highlight {
+	BACKGROUND: #ffffcc
+}
+.nabble .info-message TH {
+	BACKGROUND: #ffcc66
+}
+.nabble .dark-highlight {
+	BACKGROUND: #ffcc66
+}
+.nabble TABLE {
+	BORDER-LEFT-COLOR: #cccccc; BORDER-BOTTOM-COLOR: #cccccc; =
+BORDER-TOP-COLOR: #cccccc; BORDER-RIGHT-COLOR: #cccccc
+}
+.nabble LI {
+	BORDER-LEFT-COLOR: #cccccc; BORDER-BOTTOM-COLOR: #cccccc; =
+BORDER-TOP-COLOR: #cccccc; BORDER-RIGHT-COLOR: #cccccc
+}
+.nabble DIV {
+	BORDER-LEFT-COLOR: #cccccc; BORDER-BOTTOM-COLOR: #cccccc; =
+BORDER-TOP-COLOR: #cccccc; BORDER-RIGHT-COLOR: #cccccc
+}
+.nabble .medium-border-color {
+	BORDER-LEFT-COLOR: #cccccc; BORDER-BOTTOM-COLOR: #cccccc; =
+BORDER-TOP-COLOR: #cccccc; BORDER-RIGHT-COLOR: #cccccc
+}
+.nabble TD {
+	BORDER-LEFT-COLOR: #eeeeee; BORDER-BOTTOM-COLOR: #eeeeee; =
+BORDER-TOP-COLOR: #eeeeee; BORDER-RIGHT-COLOR: #eeeeee
+}
+.nabble .light-border-color {
+	BORDER-LEFT-COLOR: #eeeeee; BORDER-BOTTOM-COLOR: #eeeeee; =
+BORDER-TOP-COLOR: #eeeeee; BORDER-RIGHT-COLOR: #eeeeee
+}
+.nabble .dark-border-color {
+	BORDER-LEFT-COLOR: #666666; BORDER-BOTTOM-COLOR: #666666; =
+BORDER-TOP-COLOR: #666666; BORDER-RIGHT-COLOR: #666666
+}
+.nabble .error-message {
+	BORDER-LEFT-COLOR: #cc3300; BORDER-BOTTOM-COLOR: #cc3300; =
+BORDER-TOP-COLOR: #cc3300; BORDER-RIGHT-COLOR: #cc3300
+}
+.nabble .info-message {
+	BORDER-LEFT-COLOR: #ffcc33; BORDER-BOTTOM-COLOR: #ffcc33; =
+BORDER-TOP-COLOR: #ffcc33; BORDER-RIGHT-COLOR: #ffcc33
+}
+.nabble P.first-para {
+	MARGIN-TOP: 0em
+}
+.nabble A {
+	FONT-SIZE: 1em
+}
+.nabble TABLE {
+	FONT-SIZE: 1em
+}
+.nabble INPUT {
+	FONT-SIZE: 1em
+}
+.nabble TEXTAREA {
+	FONT-SIZE: 1em
+}
+.nabble SELECT {
+	FONT-SIZE: 1em
+}
+.nabble OPTION {
+	WHITE-SPACE: pre
+}
+.nabble H1 {
+	MARGIN-TOP: 0.4em; FONT-WEIGHT: normal; FONT-SIZE: 1.8em; =
+MARGIN-BOTTOM: 0.5em
+}
+.nabble H1 A:link {
+	FONT-WEIGHT: bold; TEXT-DECORATION: none
+}
+.nabble H1 A:visited {
+	FONT-WEIGHT: bold; TEXT-DECORATION: none
+}
+.nabble H2 {
+	PADDING-RIGHT: 0px; PADDING-LEFT: 0px; FONT-SIZE: 1.3em; =
+PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em
+}
+.nabble .smaller {
+	FONT-WEIGHT: normal; FONT-SIZE: 0.9em
+}
+.nabble .top-bar {
+	FONT-SIZE: 0.9em; PADDING-BOTTOM: 0.4em; VERTICAL-ALIGN: top; =
+BORDER-BOTTOM: 1px solid
+}
+.nabble .header {
+	PADDING-BOTTOM: 0.5em; BORDER-BOTTOM: 2px solid
+}
+.nabble .header H1 {
+	MARGIN-TOP: 0.3em; FLOAT: left
+}
+.nabble .search-box {
+	PADDING-TOP: 1em; TEXT-ALIGN: right
+}
+.nabble .footer-table {
+	MARGIN-TOP: 2.9em; WIDTH: 100%; BORDER-COLLAPSE: collapse
+}
+.nabble .footer-table TD {
+	PADDING-RIGHT: 0.5em; PADDING-LEFT: 0.5em; FONT-SIZE: 0.9em; =
+LINE-HEIGHT: 2em
+}
+.nabble .footer-right {
+	TEXT-ALIGN: right
+}
+.nabble TD.priority {
+	TEXT-ALIGN: center
+}
+.nabble TD.rating {
+	TEXT-ALIGN: center
+}
+.nabble TD.count {
+	TEXT-ALIGN: center
+}
+.nabble TD.frequency {
+	TEXT-ALIGN: center
+}
+.nabble TH.rating {
+	TEXT-ALIGN: center
+}
+.nabble TH.count {
+	TEXT-ALIGN: center
+}
+.nabble TH.frequency {
+	TEXT-ALIGN: center
+}
+.nabble TD.text {
+=09
+}
+.nabble TD.numeric {
+	TEXT-ALIGN: right
+}
+.nabble TD.flag {
+	WIDTH: 11px
+}
+.nabble TD.date-time {
+	WHITE-SPACE: nowrap
+}
+.nabble TD.actions {
+	FONT-SIZE: 0.9em; WHITE-SPACE: nowrap; TEXT-ALIGN: center
+}
+.nabble .message-actions {
+	MARGIN-TOP: 0.45em; FONT-SIZE: 0.9em; MARGIN-BOTTOM: 1.8em
+}
+.nabble .message-actions1 {
+	MARGIN-TOP: 0px; MARGIN-BOTTOM: 0px
+}
+.nabble .message-actions2 {
+	MARGIN-TOP: 0.5em; MARGIN-BOTTOM: 0px
+}
+.nabble .return-link {
+	PADDING-RIGHT: 0.4em; BORDER-TOP: 1px solid; MARGIN-TOP: 2em; =
+PADDING-LEFT: 0.4em; PADDING-BOTTOM: 0.4em; WIDTH: 25em; PADDING-TOP: =
+0.4em
+}
+.nabble .editor-table {
+	BORDER-RIGHT: 1px solid; BORDER-TOP: 1px solid; BORDER-LEFT: 1px solid; =
+BORDER-BOTTOM: 1px solid; border-spacing: 0
+}
+.nabble .editor-table TD {
+	PADDING-RIGHT: 0.42em; PADDING-LEFT: 0.42em; PADDING-BOTTOM: 0.42em; =
+PADDING-TOP: 0.42em; BORDER-BOTTOM: 1px solid
+}
+.nabble .edit-profile-table {
+	BORDER-RIGHT: 0px; BORDER-TOP: 0px; MARGIN: 0.4em 2em; BORDER-LEFT: =
+0px; BORDER-BOTTOM: 0px; border-spacing: 0
+}
+.nabble .edit-profile-table TD {
+	PADDING-RIGHT: 0.4em; PADDING-LEFT: 0.4em; PADDING-BOTTOM: 0.4em; =
+PADDING-TOP: 0.4em
+}
+.nabble .instructional-message {
+	PADDING-RIGHT: 0.58em; PADDING-LEFT: 0.58em; PADDING-BOTTOM: 0.58em; =
+PADDING-TOP: 0.58em
+}
+.nabble FORM {
+	MARGIN: 0px
+}
+.nabble .form-label {
+	FONT-WEIGHT: bold; FONT-SIZE: 0.9em; TEXT-ALIGN: right
+}
+.nabble .reqd-info {
+	FONT-SIZE: 0.9em
+}
+.nabble .form-label .reqd-info {
+	FONT-SIZE: 1em
+}
+.nabble TD.toolbar {
+	PADDING-BOTTOM: 0px; BORDER-BOTTOM: 0px
+}
+.nabble TD.toolbar INPUT {
+	FONT-SIZE: 0.9em
+}
+.nabble .content-description {
+	MARGIN: 1.7em
+}
+.nabble .content-description P {
+	LINE-HEIGHT: 1.67em
+}
+.nabble .content-description LI {
+	LINE-HEIGHT: 1.67em
+}
+.nabble .content-description H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 1.17em; MARGIN: 1.1em 0px 0px
+}
+.nabble BLOCKQUOTE.quote {
+	FONT-SIZE: 0.9em; MARGIN: 1.4em 1.8em; BORDER-LEFT: 2px solid
+}
+.nabble BLOCKQUOTE.quote BLOCKQUOTE.quote {
+	FONT-SIZE: 1em
+}
+.nabble DIV.quote {
+	BORDER-TOP: 1px solid; DISPLAY: inline-block
+}
+.nabble BLOCKQUOTE.quote DIV.quote-author {
+	PADDING-RIGHT: 1em; PADDING-LEFT: 1em; PADDING-BOTTOM: 0.5em; =
+PADDING-TOP: 0.5em
+}
+.nabble BLOCKQUOTE.quote DIV.quote-message {
+	PADDING-RIGHT: 1em; PADDING-LEFT: 1em; PADDING-BOTTOM: 0.5em; =
+PADDING-TOP: 0.5em
+}
+.nabble .list-table {
+	BORDER-RIGHT: 1px solid; BORDER-TOP: 1px solid; BORDER-LEFT: 1px solid; =
+WIDTH: 100%; BORDER-BOTTOM: 1px solid; BORDER-COLLAPSE: collapse
+}
+.nabble .list-table TH {
+	PADDING-RIGHT: 0.4em; PADDING-LEFT: 0.4em; FONT-WEIGHT: bold; =
+PADDING-BOTTOM: 0.4em; PADDING-TOP: 0.4em; BORDER-BOTTOM: 2px solid; =
+TEXT-ALIGN: left
+}
+.nabble .list-table TH.frequency {
+	TEXT-ALIGN: center
+}
+.list-table TH.count {
+	TEXT-ALIGN: center
+}
+.nabble .list-table TD {
+	PADDING-RIGHT: 0.4em; PADDING-LEFT: 0.4em; PADDING-BOTTOM: 0.4em; =
+PADDING-TOP: 0.4em; BORDER-BOTTOM: 1px solid
+}
+.nabble .message-table {
+	BORDER-RIGHT: 2px solid; BORDER-TOP: 2px solid; MARGIN: 0.8em 0px; =
+BORDER-LEFT: 2px solid; WIDTH: 42em; BORDER-BOTTOM: 2px solid
+}
+.nabble .message-row {
+	BORDER-RIGHT: 2px solid; PADDING-RIGHT: 5px; BORDER-TOP: 2px solid; =
+PADDING-LEFT: 5px; PADDING-BOTTOM: 5px; BORDER-LEFT: 2px solid; =
+PADDING-TOP: 5px; BORDER-BOTTOM: 2px solid
+}
+.nabble DIV.error-message {
+	BORDER-RIGHT: 1px solid; PADDING-RIGHT: 0.1em; BORDER-TOP: 1px solid; =
+PADDING-LEFT: 0.1em; PADDING-BOTTOM: 0.1em; MARGIN: 0.1em; BORDER-LEFT: =
+1px solid; PADDING-TOP: 0.1em; BORDER-BOTTOM: 1px solid; TEXT-ALIGN: =
+center
+}
+.nabble UL.toptab {
+	PADDING-LEFT: 0px; MARGIN-BOTTOM: 0.4em; PADDING-BOTTOM: 0px; =
+MARGIN-LEFT: 0px; WHITE-SPACE: nowrap; LIST-STYLE-TYPE: none
+}
+.nabble UL.toptab LI {
+	BORDER-RIGHT: 1px solid; PADDING-RIGHT: 1.25em; BORDER-TOP: 1px solid; =
+DISPLAY: inline; PADDING-LEFT: 1.25em; PADDING-BOTTOM: 0.4em; =
+BORDER-LEFT: 1px solid; MARGIN-RIGHT: 0.5em; PADDING-TOP: 0.4em; =
+BORDER-BOTTOM: 1px solid
+}
+.nabble UL.toptab LI.selected {
+	BORDER-TOP-WIDTH: 3px
+}
+.nabble UL.toptab LI A {
+	TEXT-DECORATION: none
+}
+.nabble DIV.top-border {
+	BORDER-RIGHT: 1px solid; BORDER-TOP: 1px solid; BORDER-LEFT: 1px solid; =
+BORDER-BOTTOM: 1px solid
+}
+.nabble .matching-forums-table {
+	MARGIN-TOP: 1em; WIDTH: 20em; BORDER-COLLAPSE: collapse
+}
+.nabble .matching-forums-table TD {
+	BORDER-RIGHT: 1px solid; PADDING-RIGHT: 0.3em; BORDER-TOP: 1px solid; =
+PADDING-LEFT: 0.3em; PADDING-BOTTOM: 0.3em; BORDER-LEFT: 1px solid; =
+PADDING-TOP: 0.3em; BORDER-BOTTOM: 1px solid
+}
+.nabble .matching-forums-table TD.heading {
+	BORDER-TOP-WIDTH: 0px; FONT-WEIGHT: bold; BORDER-LEFT-WIDTH: 0px; =
+BORDER-BOTTOM-WIDTH: 1px; BORDER-RIGHT-WIDTH: 0px
+}
+.nabble .matching-forums-table TD UL.level0 {
+	PADDING-LEFT: 2em; MARGIN-LEFT: 0px
+}
+.nabble .search-result-line1 {
+	FONT-SIZE: 1.25em
+}
+.nabble .search-result-line3 {
+	FONT-SIZE: 0.75em
+}
+.nabble NOSCRIPT TABLE {
+	WIDTH: 100%
+}
+.nabble NOSCRIPT TD {
+	BORDER-RIGHT: 1px solid; BORDER-TOP: 1px solid; BORDER-LEFT: 1px solid; =
+BORDER-BOTTOM: 1px solid; TEXT-ALIGN: center
+}
+.nabble .ad {
+	MARGIN-TOP: 2em
+}
+.nabble .border1 {
+	BORDER-RIGHT: 1px solid; BORDER-TOP: 1px solid; BORDER-LEFT: 1px solid; =
+BORDER-BOTTOM: 1px solid
+}
+.nabble .html-buttons INPUT {
+	PADDING-RIGHT: 0px; PADDING-LEFT: 0px; PADDING-BOTTOM: 0px; OVERFLOW: =
+visible; PADDING-TOP: 0px; HEIGHT: 2.18em
+}
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://www.nabble.com/Javascript.jtp
+
+
+
+var Nabble =3D new Object();
+
+Nabble.get =3D function(id) {
+	return document.getElementById(id);
+};
+
+Nabble.height =3D function() {
+	if( typeof( window.innerHeight ) =3D=3D 'number' ) {
+		return window.innerHeight;
+	} else if( document.documentElement && =
+document.documentElement.clientHeight ) {
+		return document.documentElement.clientHeight;
+	} else if( document.body && document.body.clientHeight ) {
+		return document.body.clientHeight;
+	}
+};
+
+Nabble.knowsHeight =3D =
+navigator.userAgent.toLowerCase().indexOf('safari') =3D=3D -1;
+
+Nabble.prepend =3D function(tag,html) {
+	if( tag.insertAdjacentHTML ) {
+		tag.insertAdjacentHTML("AfterBegin",html);
+	} else {
+		var elem =3D document.createElement("span");
+		tag.insertBefore(elem,tag.firstChild);
+		elem.innerHTML =3D html;
+	}
+};
+
+
+
+// date formatting
+
+Nabble.months =3D =
+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]=
+;
+
+Nabble.fmt2 =3D function(i) {
+	var s =3D "" + i;
+	if( s.length =3D=3D 1 )
+		s =3D "0" + s;
+	return s;
+};
+
+Nabble.now =3D new Date();
+
+Nabble.isToday =3D function(date) {
+	return date.toDateString() =3D=3D this.now.toDateString();
+};
+
+Nabble.isThisYear =3D function(date) {
+	return date.getYear() =3D=3D this.now.getYear();
+};
+
+Nabble.dateFormatters =3D {
+	us: new (function(){
+		this.formatTime =3D function(date) {
+			var hours =3D date.getHours();
+			if( hours < 12 ) {
+				var xm =3D "am";
+				if( hours=3D=3D0 )
+					hours =3D 12;
+			} else {
+				var xm =3D "pm";
+				if( hours > 12 )
+					hours -=3D 12;
+			}
+			return Nabble.fmt2(hours) + ":" + Nabble.fmt2(date.getMinutes()) + =
+xm;
+		};
+		this.formatDateOnly =3D function(date) {
+			return Nabble.months[date.getMonth()] + " " + =
+Nabble.fmt2(date.getDate()) + ", " + date.getFullYear();
+		};
+		this.formatDateLong =3D function(date) {
+			return this.formatDateOnly(date) + "; " + this.formatTime(date);
+		};
+		this.formatDateShort =3D function(date) {
+			if( Nabble.isToday(date) )
+				return this.formatTime(date);
+			if( Nabble.isThisYear(date) )
+				return Nabble.months[date.getMonth()] + " " + =
+Nabble.fmt2(date.getDate());
+			return this.formatDateOnly(date);
+		};
+	})()
+	,
+	euro: new (function(){
+		this.formatTime =3D function(date) {
+			return Nabble.fmt2(date.getHours()) + ":" + =
+Nabble.fmt2(date.getMinutes());
+		};
+		this.formatDateOnly =3D function(date) {
+			return Nabble.fmt2(date.getDate()) + "." + =
+Nabble.months[date.getMonth()] + "." + date.getFullYear();
+		};
+		this.formatDateLong =3D function(date) {
+			return this.formatTime(date) + ", " + this.formatDateOnly(date);
+		};
+		this.formatDateShort =3D function(date) {
+			if( Nabble.isToday(date) )
+				return this.formatTime(date);
+			if( Nabble.isThisYear(date) )
+				return Nabble.fmt2(date.getDate()) + "." + =
+Nabble.months[date.getMonth()];
+			return this.formatDateOnly(date);
+		};
+	})()
+	,
+	tech: new (function(){
+		this.formatTime =3D function(date) {
+			return Nabble.fmt2(date.getHours()) + ":" + =
+Nabble.fmt2(date.getMinutes());
+		};
+		this.formatDateOnly =3D function(date) {
+			return "" + date.getFullYear() + "-" + Nabble.fmt2(date.getMonth()+1) =
++ "-" + Nabble.fmt2(date.getDate())
+		};
+		this.formatDateLong =3D function(date) {
+			return this.formatDateOnly(date) + " " + this.formatTime(date);
+		};
+		this.formatDateShort =3D function(date) {
+			if( Nabble.isToday(date) )
+				return this.formatTime(date);
+			if( Nabble.isThisYear(date) )
+				return Nabble.fmt2(date.getMonth()+1) + "-" + =
+Nabble.fmt2(date.getDate());
+			return this.formatDateOnly(date);
+		};
+	})()
+};
+
+Nabble.getDateFmt =3D function() {
+	var dateFmt =3D Nabble.getCookie("date_fmt");
+	return dateFmt=3D=3Dnull ? "us" : dateFmt;
+};
+
+Nabble.formatDateOnly =3D function(date) {
+	return Nabble.dateFormatters[Nabble.getDateFmt()].formatDateOnly(date);
+};
+
+Nabble.formatDateLong =3D function(date) {
+	return Nabble.dateFormatters[Nabble.getDateFmt()].formatDateLong(date);
+};
+
+Nabble.formatDateShort =3D function(date) {
+	var fmt =3D Nabble.dateFormatters[Nabble.getDateFmt()];
+	return '<span title=3D"' + fmt.formatDateLong(date) + '">'=20
+		+ fmt.formatDateShort(date) + '</span>';
+};
+
+
+
+// from http://www.webreference.com/js/column8/functions.html
+
+Nabble.getCookie =3D function(name) {
+	var dc =3D document.cookie;
+	var prefix =3D name + "=3D";
+	var begin =3D dc.indexOf("; " + prefix);
+	if (begin =3D=3D -1) {
+		begin =3D dc.indexOf(prefix);
+		if (begin !=3D 0) return null;
+	} else
+		begin +=3D 2;
+	var end =3D document.cookie.indexOf(";", begin);
+	if (end =3D=3D -1)
+		end =3D dc.length;
+	return unescape(dc.substring(begin + prefix.length, =
+end).replace(/\+/g," "));
+};
+
+Nabble.setCookie =3D function(name, value) {
+	var curCookie =3D name + "=3D" + escape(value) + "; path=3D/";
+	document.cookie =3D curCookie;
+};
+
+Nabble.setPersistentCookie =3D function(name, value) {
+	var expires =3D new Date();
+	expires.setFullYear(expires.getFullYear()+10);
+	var curCookie =3D name + "=3D" + escape(value) + "; expires=3D" + =
+expires.toGMTString() + "; path=3D/";
+	document.cookie =3D curCookie;
+};
+
+Nabble.deleteCookie =3D function(name) {
+  if (this.getCookie(name)) {
+    document.cookie =3D name + "=3D" +
+    "; path=3D/"  +
+    "; expires=3DThu, 01-Jan-1970 00:00:01 GMT";
+  }
+};
+
+
+Nabble.user =3D Nabble.getCookie("userId");
+Nabble.email =3D Nabble.getCookie("email");
+Nabble.username =3D Nabble.getCookie("username");
+
+
+
+
+Nabble.vars =3D ["skin","prev","notice"];
+Nabble.pvars =3D ["tview"];  // persistent
+
+(function(){
+	for( var i=3D0; i<Nabble.vars.length; i++ ) {
+		var v =3D Nabble.vars[i];
+		Nabble[v] =3D Nabble.getCookie(v);
+	}
+	for( var i=3D0; i<Nabble.pvars.length; i++ ) {
+		var v =3D Nabble.pvars[i];
+		Nabble[v] =3D Nabble.getCookie(v);
+	}
+})();
+
+Nabble.handleVars =3D function() {
+	for( var i=3D0; i<Nabble.vars.length; i++ ) {
+		var v =3D Nabble.vars[i];
+		if( Nabble[v] !=3D Nabble.getCookie(v) ) {
+			Nabble.setVar(v,Nabble[v]);
+		}
+	}
+	for( var i=3D0; i<Nabble.pvars.length; i++ ) {
+		var v =3D Nabble.pvars[i];
+		if( Nabble[v] !=3D Nabble.getCookie(v) ) {
+			Nabble.setVar(v,this[v]);
+		}
+	}
+};
+
+Nabble.contains =3D function(a,v) {
+	for( var i=3D0; i<a.length; i++ ) {
+		if( a[i]=3D=3Dv )
+			return true;
+	}
+	return false;
+};
+
+Nabble.setVar =3D function(v,val) {
+	Nabble[v] =3D val;
+	top.Nabble[v] =3D val;
+	if( val ) {
+		if( this.contains(this.vars,v) ) {
+			this.setCookie(v,val);
+		} else if( this.contains(this.pvars,v) ) {
+			this.setPersistentCookie(v,val);
+		} else {
+			throw new Error("var not found: "+v);
+		}
+	} else {
+		this.deleteCookie(v);
+	}
+};
+
+
+
+// from http://www.codehouse.com/javascript/articles/external/
+
+Nabble.loadScript =3D function(url) {
+	var e =3D document.createElement("script");
+	e.src =3D url;
+	e.type=3D"text/javascript";
+	document.getElementsByTagName("head")[0].appendChild(e);
+};
+
+Nabble.selectOption =3D function(select,value) {
+	var options =3D select.options;
+	for( var i=3D0; i<options.length; i++ ) {
+		var option =3D options[i];
+		if( option.value =3D=3D value )
+			option.selected =3D true;
+	}
+};
+
+Nabble.hilt =3D function(searchterms, elem) {
+    if (elem.childNodes && elem.childNodes.length > 0) {
+        for (var i=3D0; i<elem.childNodes.length; i++) {
+            this.hilt(searchterms, elem.childNodes[i]);
+        }
+    } else if (elem.nodeType) {
+        if (elem.nodeType =3D=3D document.TEXT_NODE || elem.nodeType =
+=3D=3D 3) {
+            var txt =3D elem.nodeValue;
+            var rgx =3D new RegExp("\\b("+searchterms+")\\w*\\b", "gi");
+            var result;
+            var start =3D 0;
+            var newFragment =3D document.createElement("span");
+            while ((result =3D rgx.exec(txt)) !=3D null) {
+                var end =3D result.index;
+                var textNode =3D =
+document.createTextNode(txt.slice(start, end));
+                newFragment.appendChild(textNode);
+                var hlNode =3D document.createElement("b");
+				hlNode.className =3D "highlight";
+                hlNode.appendChild(document.createTextNode(result[0]));
+                newFragment.appendChild(hlNode);
+                start =3D end + result[0].length;
+            }
+            =
+newFragment.appendChild(document.createTextNode(txt.slice(start)));
+            elem.parentNode.replaceChild(newFragment, elem);
+        }
+    }
+};
+
+Nabble.getSearchterms =3D function() {
+	var searchterms =3D this.getCookie("searchterms");
+	if (document.referrer) {
+		var result =3D Nabble.getSearchTerms2(document.referrer);
+		if (result!=3Dnull) {
+			var query =3D decodeURIComponent(result);
+			searchterms =3D =
+query.replace(/\W+/g,"|").replace(/^\|/,"").replace(/\|$/,"");
+			this.setCookie("searchterms", searchterms);
+			Nabble.gquery =3D query.replace(/\+/g," ");
+		}
+	}
+	return searchterms;
+};
+
+// logic from _uOrg() in urchin.js
+Nabble.getSearchTerms2 =3D function(referrer) {
+	if( typeof(_uOsr)=3D=3D"undefined" || typeof(_uOkw)=3D=3D"undefined" )
+		return null;
+	var searchEngines =3D _uOsr;  // from urchin
+	var searchQueries =3D _uOkw;  // from urchin
+	var i;
+	if( referrer=3D=3Dnull || (i=3Dreferrer.indexOf("://")) < 0 )
+		return null;
+	var h =3D referrer.substring(i+3);
+	if (h.indexOf("/") > -1) {
+		h =3D h.substring(0,h.indexOf("/"));
+	}
+	for (var ii=3D0; ii<searchEngines.length; ii++) {
+		var searchEngine =3D searchEngines[ii];
+		var searchQuery =3D searchQueries[ii];
+		if (h.toLowerCase().indexOf(searchEngine.toLowerCase()) > -1) {
+			if ((i=3Dreferrer.indexOf("?"+searchQuery+"=3D")) > -1 || =
+(i=3Dreferrer.indexOf("&"+searchQuery+"=3D")) > -1) {
+				var k =3D =
+referrer.substring(i+searchQuery.length+2,referrer.length);
+				if ((i=3Dk.indexOf("&")) > -1)
+					k =3D k.substring(0,i);
+				return k;
+			}
+		}
+	}
+	return null;
+};
+
+
+Nabble.subscribeWindow =3D function(url) {
+	subsWin =3D =
+window.open(url,'subsWin','height=3D400,width=3D600,scrollbars');
+	subsWin.focus();
+};
+
+Nabble.userHeader =3D function(forum) {
+	if( this.user=3D=3Dnull ) {
+		var s =3D '';
+		s +=3D '<a =
+href=3D"/user/Login.jtp?nextUrl=3D'+encodeURIComponent(top.location)+'" =
+target=3D"_top">Login</a>';
+		s +=3D ' : ';
+		s +=3D '<a =
+href=3D"/user/Register.jtp?nextUrl=3D'+encodeURIComponent(top.location)+'=
+" target=3D"_top">Register</a>';
+		this.get("nabble.user_header").innerHTML =3D s;
+	} else {
+		var s =3D '';
+		s +=3D Nabble.favoriteForumsHeader(forum);
+		s +=3D '<a href=3D"/user/UserProfile.jtp?user=3D' + this.user + '" =
+target=3D"_top">';
+		s +=3D this.username + "'s Account";
+		s +=3D '</a>';
+		this.get("nabble.user_header").innerHTML =3D s;
+	}
+};
+
+// favorite forums
+
+Nabble.favoriteForumsHeader =3D function(forum) {
+	var fmt =3D Nabble.getCookie("favorites");
+	if( fmt =3D=3D "link" ) {
+		return Nabble.favoriteForumsLinkHeader(forum);
+	} else {
+		return Nabble.favoriteForumsSelectHeader(forum);
+	}
+};
+
+Nabble.favoriteForumsLinkHeader =3D function(forum) {
+	var s =3D '';
+	s +=3D '<a href=3D"/forum/Favorites.jtp" target=3D"_top">Favorite =
+Forums</a>';
+	s +=3D ' <span id=3D"nabble.add_fav"></span> ';
+	s +=3D ' - ';
+	return s;
+};
+
+Nabble.favoriteForumsSelectHeader =3D function(forum) {
+	var isSelectPathetic =3D navigator.appName.indexOf("Microsoft") !=3D =
+-1;
+	var s =3D '';
+	if( isSelectPathetic ) {
+		s +=3D '<span class=3D"favorites" =
+style=3D"width:10em;overflow:hidden;" =
+onmouseover=3D"Nabble.loadFavorites('+forum+')">';
+		s +=3D '<select style=3D"width:101%;"';
+	} else {
+		s +=3D '<select class=3D"favorites" style=3D"width:10em;"';
+	}
+	s +=3D ' id=3D"nabble.favorites" onchange=3D"Nabble.favoritesSelect();" =
+';
+	if( isSelectPathetic ) {
+		s +=3D 'onmouseover=3D"this.style.width=3D\'auto\';setActive();" =
+ondeactivate=3D"this.style.width=3D\'100%\';"';
+	} else {
+		s +=3D 'onmouseover=3D"Nabble.loadFavorites(' + forum + ')"';
+	}
+	s +=3D '>';
+	s +=3D '<option value=3D"">Favorite Forums</option>';
+	s +=3D '</select>';
+	if( isSelectPathetic ) {
+		s +=3D '</span>';
+	}
+	s +=3D ' &nbsp; ';
+	if( isSelectPathetic ) {
+		setTimeout(
+			  'Nabble.get("nabble.favorites").style.width =3D "100%";'
+			, 1
+		)
+	}
+	return s;
+};
+
+Nabble.gotFavorites =3D false;
+
+Nabble.loadFavorites =3D function(forum) {
+	if( this.gotFavorites )
+		return;
+	var url =3D "/forum/FavoriteForums.jtp";
+	if( forum )
+		url +=3D "?forum=3D" + forum;
+	this.loadScript(url);
+	this.gotFavorites =3D true;
+};
+
+Nabble.favoritesSelect =3D function() {
+	var select =3D this.get("nabble.favorites");
+	var url =3D select.options[select.selectedIndex].value;
+	select.options[0].selected =3D true;
+	if( !url )
+		return;
+	this.gotFavorites =3D false;
+	top.location =3D url;
+};
+
+
+Nabble.pngIEChg =3D function() {
+	if( event.propertyName !=3D "src" )
+		return;
+	var img =3D event.srcElement;
+	img.parentNode.style.filter =3D =
+"progid:DXImageTransform.Microsoft.AlphaImageLoader(src=3D'"+img.src+"');=
+display:inline-block;";
+};
+
+Nabble.pngIEFix =3D function() {
+	if( navigator.appVersion.indexOf("MSIE 6") =3D=3D -1 )
+		return
+	var a =3D Nabble.get("nabble").getElementsByTagName("img");
+	for( var i=3D0; i<a.length; i++ ) {
+		var img =3D a[i];
+		if( img.style.filter )
+			continue;
+		var src =3D img.src;
+		if( !src || !src.match(/\.png$/i) )
+			continue;
+		img.style.filter +=3D =
+"progid:DXImageTransform.Microsoft.Alpha(opacity=3D0)";
+		img.onpropertychange =3D "Nabble.pngIEChg();";
+		img.outerHTML =3D=20
+			'<span =
+style=3D"filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src=3D=
+\''+src+'\');display:inline-block;'+(img.parentNode.tagName=3D=3D"A"?"cur=
+sor:pointer;":"")+'">'
+			+ img.outerHTML
+			+ '</span>'
+		;
+	}
+};
+
+Nabble.divIEFix =3D function() {
+	if( navigator.appVersion.indexOf("MSIE 6") =3D=3D -1 )
+		return
+	var a =3D Nabble.get("nabble").getElementsByTagName("div");
+	for( var i=3D0; i<a.length; i++ ) {
+		var t =3D a[i];
+		if( t.getAttribute("no_zoom") )
+			continue;
+		t.style.zoom =3D "100%";
+	}
+};
+
+Nabble.addHandler =3D function(obj,attr,fn) {
+	var oldFn =3D obj[attr];
+	if( oldFn ) {
+		obj[attr] =3D function() {
+			oldFn();
+			fn();
+		}
+	} else {
+		obj[attr] =3D fn;
+	}
+};
+
+Nabble.addHandlers =3D function() {
+	if( navigator.appVersion.indexOf("MSIE 6") !=3D -1 ) {
+		window.attachEvent( "onload", Nabble.pngIEFix );
+		window.attachEvent( "onload", Nabble.divIEFix );
+	}
+	if( self=3D=3Dtop )
+		Nabble.addHandler( window, "onfocus", Nabble.handleVars );
+};
+
+
+Nabble.fixTopicLinks =3D function() {
+	if( Nabble.tview =3D=3D "dump" )
+		return;
+	var a =3D Nabble.get("nabble").getElementsByTagName("a");
+	for( var i=3D0; i<a.length; i++ ) {
+		var tag =3D a[i];
+		var href =3D tag.getAttribute("framed_href");
+		if( href=3D=3Dnull )
+			continue;
+		tag.href =3D href;
+	}
+};
+
+Nabble.forumLinkStart =3D function() {
+	if( navigator.appName.indexOf("Microsoft") !=3D -1 ) {
+		document.write('<span class=3D"forum-link-ie">');
+	} else {
+		document.write('<div class=3D"forum-link">');
+	}
+};
+
+Nabble.forumLinkEnd =3D function() {
+	if( navigator.appName.indexOf("Microsoft") !=3D -1 ) {
+		document.write('</span');
+	} else {
+		document.write('</div>');
+	}
+};
+
+Nabble.currentStyle =3D function(t) {
+	return t.currentStyle ? t.currentStyle : getComputedStyle(t,null);
+};
+
+Nabble.addCssRule =3D function(sheet,selector,style) {
+	if( sheet.addRule ) {
+		sheet.addRule(selector,style);
+	} else {
+		sheet.insertRule(selector+'{'+style+'}',sheet.cssRules.length);
+	}
+};
+
+Nabble.writeReturnToLink =3D function(link) {
+	document.writeln('<br /><br /><p>&#171; '+link+'</p>');
+};
+
+Nabble.messageTextWidth =3D function() {
+	var maxWidth =3D Nabble.getCookie("max_width");
+	if( maxWidth=3D=3Dnull )
+		return;
+	document.write("<style>.nabble .message-text {max-width: =
+"+maxWidth+";}</style>");
+}
+
+Nabble.setFontSize =3D function() {
+	var fontSize =3D Nabble.getCookie("font_size");
+	if( fontSize )
+		document.write("<style>body, table .nabble {font-size: =
+"+fontSize+";}</style>");
+}
+
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://www.google-analytics.com/urchin.js
+
+//-- Google Analytics Urchin Module=0A=
+//-- Copyright 2005 Google, All Rights Reserved.=0A=
+=0A=
+//-- Urchin On Demand Settings ONLY=0A=
+var _uacct=3D"";			// set up the Urchin Account=0A=
+var _userv=3D1;			// service mode (0=3Dlocal,1=3Dremote,2=3Dboth)=0A=
+=0A=
+//-- UTM User Settings=0A=
+var _ufsc=3D1;			// set client info flag (1=3Don|0=3Doff)=0A=
+var _udn=3D"auto";		// (auto|none|domain) set the domain name for cookies=0A=
+var _uhash=3D"on";		// (on|off) unique domain hash for cookies=0A=
+var _utimeout=3D"1800";   	// set the inactive session timeout in seconds=0A=
+var _ugifpath=3D"/__utm.gif";	// set the web path to the __utm.gif file=0A=
+var _utsp=3D"|";			// transaction field separator=0A=
+var _uflash=3D1;			// set flash version detect option (1=3Don|0=3Doff)=0A=
+var _utitle=3D1;			// set the document title detect option =
+(1=3Don|0=3Doff)=0A=
+var _ulink=3D0;			// enable linker functionality (1=3Don|0=3Doff)=0A=
+var _uanchor=3D0;			// enable use of anchors for campaign =
+(1=3Don|0=3Doff)=0A=
+var _utcp=3D"/";			// the cookie path for tracking=0A=
+var _usample=3D100;		// The sampling % of visitors to track (1-100).=0A=
+=0A=
+//-- UTM Campaign Tracking Settings=0A=
+var _uctm=3D1;			// set campaign tracking module (1=3Don|0=3Doff)=0A=
+var _ucto=3D"15768000";		// set timeout in seconds (6 month default)=0A=
+var _uccn=3D"utm_campaign";	// name=0A=
+var _ucmd=3D"utm_medium";		// medium (cpc|cpm|link|email|organic)=0A=
+var _ucsr=3D"utm_source";		// source=0A=
+var _uctr=3D"utm_term";		// term/keyword=0A=
+var _ucct=3D"utm_content";	// content=0A=
+var _ucid=3D"utm_id";		// id number=0A=
+var _ucno=3D"utm_nooverride";	// don't override=0A=
+=0A=
+//-- Auto/Organic Sources and Keywords=0A=
+var _uOsr=3Dnew Array();=0A=
+var _uOkw=3Dnew Array();=0A=
+_uOsr[0]=3D"google";	_uOkw[0]=3D"q";=0A=
+_uOsr[1]=3D"yahoo";	_uOkw[1]=3D"p";=0A=
+_uOsr[2]=3D"msn";		_uOkw[2]=3D"q";=0A=
+_uOsr[3]=3D"aol";		_uOkw[3]=3D"query";=0A=
+_uOsr[4]=3D"aol";		_uOkw[4]=3D"encquery";=0A=
+_uOsr[5]=3D"lycos";	_uOkw[5]=3D"query";=0A=
+_uOsr[6]=3D"ask";		_uOkw[6]=3D"q";=0A=
+_uOsr[7]=3D"altavista";	_uOkw[7]=3D"q";=0A=
+_uOsr[8]=3D"search";	_uOkw[8]=3D"q";=0A=
+_uOsr[9]=3D"netscape";	_uOkw[9]=3D"s";=0A=
+_uOsr[10]=3D"cnn";	_uOkw[10]=3D"query";=0A=
+_uOsr[11]=3D"looksmart";	_uOkw[11]=3D"qt";=0A=
+_uOsr[12]=3D"about";	_uOkw[12]=3D"terms";=0A=
+_uOsr[13]=3D"mamma";	_uOkw[13]=3D"query";=0A=
+_uOsr[14]=3D"alltheweb";	_uOkw[14]=3D"q";=0A=
+_uOsr[15]=3D"gigablast";	_uOkw[15]=3D"q";=0A=
+_uOsr[16]=3D"voila";	_uOkw[16]=3D"kw";=0A=
+_uOsr[17]=3D"virgilio";	_uOkw[17]=3D"qs";=0A=
+_uOsr[18]=3D"live";	_uOkw[18]=3D"q";=0A=
+_uOsr[19]=3D"baidu";	_uOkw[19]=3D"wd";=0A=
+_uOsr[20]=3D"alice";	_uOkw[20]=3D"qs";=0A=
+_uOsr[21]=3D"seznam";	_uOkw[21]=3D"w";=0A=
+_uOsr[22]=3D"yandex";	_uOkw[22]=3D"text";=0A=
+_uOsr[23]=3D"najdi";	_uOkw[23]=3D"q";=0A=
+=0A=
+//-- Auto/Organic Keywords to Ignore=0A=
+var _uOno=3Dnew Array();=0A=
+//_uOno[0]=3D"urchin";=0A=
+//_uOno[1]=3D"urchin.com";=0A=
+//_uOno[2]=3D"www.urchin.com";=0A=
+=0A=
+//-- Referral domains to Ignore=0A=
+var _uRno=3Dnew Array();=0A=
+//_uRno[0]=3D".urchin.com";=0A=
+=0A=
+//-- **** Don't modify below this point ***=0A=
+var =
+_uff,_udh,_udt,_ubl=3D0,_udo=3D"",_uu,_ufns=3D0,_uns=3D0,_ur=3D"-",_ufno=3D=
+0,_ust=3D0,_ubd=3Ddocument,_udl=3D_ubd.location,_udlh=3D"",_uwv=3D"1";=0A=
+var _ugifpath2=3D"http://www.google-analytics.com/__utm.gif";=0A=
+if (_udl.hash) _udlh=3D_udl.href.substring(_udl.href.indexOf('#'));=0A=
+if (_udl.protocol=3D=3D"https:") =
+_ugifpath2=3D"https://ssl.google-analytics.com/__utm.gif";=0A=
+if (!_utcp || _utcp=3D=3D"") _utcp=3D"/";=0A=
+function urchinTracker(page) {=0A=
+ if (_udl.protocol=3D=3D"file:") return;=0A=
+ if (_uff && (!page || page=3D=3D"")) return;=0A=
+ var a,b,c,xx,v,z,k,x=3D"",s=3D"",f=3D0;=0A=
+ var nx=3D" expires=3DSun, 18 Jan 2038 00:00:00 GMT;";=0A=
+ var dc=3D_ubd.cookie;=0A=
+ _udh=3D_uDomain();=0A=
+ if (!_uVG()) return;=0A=
+ _uu=3DMath.round(Math.random()*2147483647);=0A=
+ _udt=3Dnew Date();=0A=
+ _ust=3DMath.round(_udt.getTime()/1000);=0A=
+ a=3Ddc.indexOf("__utma=3D"+_udh);=0A=
+ b=3Ddc.indexOf("__utmb=3D"+_udh);=0A=
+ c=3Ddc.indexOf("__utmc=3D"+_udh);=0A=
+ if (_udn && _udn!=3D"") { _udo=3D" domain=3D"+_udn+";"; }=0A=
+ if (_utimeout && _utimeout!=3D"") {=0A=
+  x=3Dnew Date(_udt.getTime()+(_utimeout*1000));=0A=
+  x=3D" expires=3D"+x.toGMTString()+";";=0A=
+ }=0A=
+ if (_ulink) {=0A=
+  if (_uanchor && _udlh && _udlh!=3D"") s=3D_udlh+"&";=0A=
+  s+=3D_udl.search;=0A=
+  if(s && s!=3D"" && s.indexOf("__utma=3D")>=3D0) {=0A=
+   if (!(_uIN(a=3D_uGC(s,"__utma=3D","&")))) a=3D"-";=0A=
+   if (!(_uIN(b=3D_uGC(s,"__utmb=3D","&")))) b=3D"-";=0A=
+   if (!(_uIN(c=3D_uGC(s,"__utmc=3D","&")))) c=3D"-";=0A=
+   v=3D_uGC(s,"__utmv=3D","&");=0A=
+   z=3D_uGC(s,"__utmz=3D","&");=0A=
+   k=3D_uGC(s,"__utmk=3D","&");=0A=
+   xx=3D_uGC(s,"__utmx=3D","&");=0A=
+   if ((k*1) !=3D ((_uHash(a+b+c+xx+z+v)*1)+(_udh*1))) =
+{_ubl=3D1;a=3D"-";b=3D"-";c=3D"-";xx=3D"-";z=3D"-";v=3D"-";}=0A=
+   if (a!=3D"-" && b!=3D"-" && c!=3D"-") f=3D1;=0A=
+   else if(a!=3D"-") f=3D2;=0A=
+  }=0A=
+ }=0A=
+ if(f=3D=3D1) {=0A=
+  _ubd.cookie=3D"__utma=3D"+a+"; path=3D"+_utcp+";"+nx+_udo;=0A=
+  _ubd.cookie=3D"__utmb=3D"+b+"; path=3D"+_utcp+";"+x+_udo;=0A=
+  _ubd.cookie=3D"__utmc=3D"+c+"; path=3D"+_utcp+";"+_udo;=0A=
+ } else if (f=3D=3D2) {=0A=
+  a=3D_uFixA(s,"&",_ust);=0A=
+  _ubd.cookie=3D"__utma=3D"+a+"; path=3D"+_utcp+";"+nx+_udo;=0A=
+  _ubd.cookie=3D"__utmb=3D"+_udh+"; path=3D"+_utcp+";"+x+_udo;=0A=
+  _ubd.cookie=3D"__utmc=3D"+_udh+"; path=3D"+_utcp+";"+_udo;=0A=
+  _ufns=3D1;=0A=
+ } else if (a>=3D0 && b>=3D0 && c>=3D0) {=0A=
+  _ubd.cookie=3D"__utmb=3D"+_udh+"; path=3D"+_utcp+";"+x+_udo;=0A=
+ } else {=0A=
+  if (a>=3D0) a=3D_uFixA(_ubd.cookie,";",_ust);=0A=
+  else a=3D_udh+"."+_uu+"."+_ust+"."+_ust+"."+_ust+".1";=0A=
+  _ubd.cookie=3D"__utma=3D"+a+"; path=3D"+_utcp+";"+nx+_udo;=0A=
+  _ubd.cookie=3D"__utmb=3D"+_udh+"; path=3D"+_utcp+";"+x+_udo;=0A=
+  _ubd.cookie=3D"__utmc=3D"+_udh+"; path=3D"+_utcp+";"+_udo;=0A=
+  _ufns=3D1;=0A=
+ }=0A=
+ if (_ulink && xx && xx!=3D"" && xx!=3D"-") {=0A=
+   xx=3D_uUES(xx);=0A=
+   if (xx.indexOf(";")=3D=3D-1) _ubd.cookie=3D"__utmx=3D"+xx+"; =
+path=3D"+_utcp+";"+nx+_udo;=0A=
+ }=0A=
+ if (_ulink && v && v!=3D"" && v!=3D"-") {=0A=
+  v=3D_uUES(v);=0A=
+  if (v.indexOf(";")=3D=3D-1) _ubd.cookie=3D"__utmv=3D"+v+"; =
+path=3D"+_utcp+";"+nx+_udo;=0A=
+ }=0A=
+ _uInfo(page);=0A=
+ _ufns=3D0;=0A=
+ _ufno=3D0;=0A=
+ _uff=3D1;=0A=
+}=0A=
+function _uInfo(page) {=0A=
+ var p,s=3D"",dm=3D"",pg=3D_udl.pathname+_udl.search;=0A=
+ if (page && page!=3D"") pg=3D_uES(page,1);=0A=
+ _ur=3D_ubd.referrer;=0A=
+ if (!_ur || _ur=3D=3D"") { _ur=3D"-"; }=0A=
+ else {=0A=
+  dm=3D_ubd.domain;=0A=
+  if(_utcp && _utcp!=3D"/") dm+=3D_utcp;=0A=
+  p=3D_ur.indexOf(dm);=0A=
+  if ((p>=3D0) && (p<=3D8)) { _ur=3D"0"; }=0A=
+  if (_ur.indexOf("[")=3D=3D0 && =
+_ur.lastIndexOf("]")=3D=3D(_ur.length-1)) { _ur=3D"-"; }=0A=
+ }=0A=
+ s+=3D"&utmn=3D"+_uu;=0A=
+ if (_ufsc) s+=3D_uBInfo();=0A=
+ if (_uctm) s+=3D_uCInfo();=0A=
+ if (_utitle && _ubd.title && _ubd.title!=3D"") =
+s+=3D"&utmdt=3D"+_uES(_ubd.title);=0A=
+ if (_udl.hostname && _udl.hostname!=3D"") =
+s+=3D"&utmhn=3D"+_uES(_udl.hostname);=0A=
+ s+=3D"&utmr=3D"+_ur;=0A=
+ s+=3D"&utmp=3D"+pg;=0A=
+ if ((_userv=3D=3D0 || _userv=3D=3D2) && _uSP()) {=0A=
+  var i=3Dnew Image(1,1);=0A=
+  i.src=3D_ugifpath+"?"+"utmwv=3D"+_uwv+s;=0A=
+  i.onload=3Dfunction() {_uVoid();}=0A=
+ }=0A=
+ if ((_userv=3D=3D1 || _userv=3D=3D2) && _uSP()) {=0A=
+  var i2=3Dnew Image(1,1);=0A=
+  =
+i2.src=3D_ugifpath2+"?"+"utmwv=3D"+_uwv+s+"&utmac=3D"+_uacct+"&utmcc=3D"+=
+_uGCS();=0A=
+  i2.onload=3Dfunction() { _uVoid(); }=0A=
+ }=0A=
+ return;=0A=
+}=0A=
+function _uVoid() { return; }=0A=
+function _uCInfo() {=0A=
+ if (!_ucto || _ucto=3D=3D"") { _ucto=3D"15768000"; }=0A=
+ if (!_uVG()) return;=0A=
+ var =
+c=3D"",t=3D"-",t2=3D"-",t3=3D"-",o=3D0,cs=3D0,cn=3D0,i=3D0,z=3D"-",s=3D""=
+;=0A=
+ if (_uanchor && _udlh && _udlh!=3D"") s=3D_udlh+"&";=0A=
+ s+=3D_udl.search;=0A=
+ var x=3Dnew Date(_udt.getTime()+(_ucto*1000));=0A=
+ var dc=3D_ubd.cookie;=0A=
+ x=3D" expires=3D"+x.toGMTString()+";";=0A=
+ if (_ulink && !_ubl) {=0A=
+  z=3D_uUES(_uGC(s,"__utmz=3D","&"));=0A=
+  if (z!=3D"-" && z.indexOf(";")=3D=3D-1) { =
+_ubd.cookie=3D"__utmz=3D"+z+"; path=3D"+_utcp+";"+x+_udo; return ""; }=0A=
+ }=0A=
+ z=3Ddc.indexOf("__utmz=3D"+_udh);=0A=
+ if (z>-1) { z=3D_uGC(dc,"__utmz=3D"+_udh,";"); }=0A=
+ else { z=3D"-"; }=0A=
+ t=3D_uGC(s,_ucid+"=3D","&");=0A=
+ t2=3D_uGC(s,_ucsr+"=3D","&");=0A=
+ t3=3D_uGC(s,"gclid=3D","&");=0A=
+ if ((t!=3D"-" && t!=3D"") || (t2!=3D"-" && t2!=3D"") || (t3!=3D"-" && =
+t3!=3D"")) {=0A=
+  if (t!=3D"-" && t!=3D"") c+=3D"utmcid=3D"+_uEC(t);=0A=
+  if (t2!=3D"-" && t2!=3D"") { if (c !=3D "") c+=3D"|"; =
+c+=3D"utmcsr=3D"+_uEC(t2); }=0A=
+  if (t3!=3D"-" && t3!=3D"") { if (c !=3D "") c+=3D"|"; =
+c+=3D"utmgclid=3D"+_uEC(t3); }=0A=
+  t=3D_uGC(s,_uccn+"=3D","&");=0A=
+  if (t!=3D"-" && t!=3D"") c+=3D"|utmccn=3D"+_uEC(t);=0A=
+  else c+=3D"|utmccn=3D(not+set)";=0A=
+  t=3D_uGC(s,_ucmd+"=3D","&");=0A=
+  if (t!=3D"-" && t!=3D"") c+=3D"|utmcmd=3D"+_uEC(t);=0A=
+  else  c+=3D"|utmcmd=3D(not+set)";=0A=
+  t=3D_uGC(s,_uctr+"=3D","&");=0A=
+  if (t!=3D"-" && t!=3D"") c+=3D"|utmctr=3D"+_uEC(t);=0A=
+  else { t=3D_uOrg(1); if (t!=3D"-" && t!=3D"") =
+c+=3D"|utmctr=3D"+_uEC(t); }=0A=
+  t=3D_uGC(s,_ucct+"=3D","&");=0A=
+  if (t!=3D"-" && t!=3D"") c+=3D"|utmcct=3D"+_uEC(t);=0A=
+  t=3D_uGC(s,_ucno+"=3D","&");=0A=
+  if (t=3D=3D"1") o=3D1;=0A=
+  if (z!=3D"-" && o=3D=3D1) return "";=0A=
+ }=0A=
+ if (c=3D=3D"-" || c=3D=3D"") { c=3D_uOrg(); if (z!=3D"-" && =
+_ufno=3D=3D1)  return ""; }=0A=
+ if (c=3D=3D"-" || c=3D=3D"") { if (_ufns=3D=3D1)  c=3D_uRef(); if =
+(z!=3D"-" && _ufno=3D=3D1)  return ""; }=0A=
+ if (c=3D=3D"-" || c=3D=3D"") {=0A=
+  if (z=3D=3D"-" && _ufns=3D=3D1) { =
+c=3D"utmccn=3D(direct)|utmcsr=3D(direct)|utmcmd=3D(none)"; }=0A=
+  if (c=3D=3D"-" || c=3D=3D"") return "";=0A=
+ }=0A=
+ if (z!=3D"-") {=0A=
+  i=3Dz.indexOf(".");=0A=
+  if (i>-1) i=3Dz.indexOf(".",i+1);=0A=
+  if (i>-1) i=3Dz.indexOf(".",i+1);=0A=
+  if (i>-1) i=3Dz.indexOf(".",i+1);=0A=
+  t=3Dz.substring(i+1,z.length);=0A=
+  if (t.toLowerCase()=3D=3Dc.toLowerCase()) cs=3D1;=0A=
+  t=3Dz.substring(0,i);=0A=
+  if ((i=3Dt.lastIndexOf(".")) > -1) {=0A=
+   t=3Dt.substring(i+1,t.length);=0A=
+   cn=3D(t*1);=0A=
+  }=0A=
+ }=0A=
+ if (cs=3D=3D0 || _ufns=3D=3D1) {=0A=
+  t=3D_uGC(dc,"__utma=3D"+_udh,";");=0A=
+  if ((i=3Dt.lastIndexOf(".")) > 9) {=0A=
+   _uns=3Dt.substring(i+1,t.length);=0A=
+   _uns=3D(_uns*1);=0A=
+  }=0A=
+  cn++;=0A=
+  if (_uns=3D=3D0) _uns=3D1;=0A=
+  _ubd.cookie=3D"__utmz=3D"+_udh+"."+_ust+"."+_uns+"."+cn+"."+c+"; =
+path=3D"+_utcp+"; "+x+_udo;=0A=
+ }=0A=
+ if (cs=3D=3D0 || _ufns=3D=3D1) return "&utmcn=3D1";=0A=
+ else return "&utmcr=3D1";=0A=
+}=0A=
+function _uRef() {=0A=
+ if (_ur=3D=3D"0" || _ur=3D=3D"" || _ur=3D=3D"-") return "";=0A=
+ var i=3D0,h,k,n;=0A=
+ if ((i=3D_ur.indexOf("://"))<0) return "";=0A=
+ h=3D_ur.substring(i+3,_ur.length);=0A=
+ if (h.indexOf("/") > -1) {=0A=
+  k=3Dh.substring(h.indexOf("/"),h.length);=0A=
+  if (k.indexOf("?") > -1) k=3Dk.substring(0,k.indexOf("?"));=0A=
+  h=3Dh.substring(0,h.indexOf("/"));=0A=
+ }=0A=
+ h=3Dh.toLowerCase();=0A=
+ n=3Dh;=0A=
+ if ((i=3Dn.indexOf(":")) > -1) n=3Dn.substring(0,i);=0A=
+ for (var ii=3D0;ii<_uRno.length;ii++) {=0A=
+  if ((i=3Dn.indexOf(_uRno[ii].toLowerCase())) > -1 && =
+n.length=3D=3D(i+_uRno[ii].length)) { _ufno=3D1; break; }=0A=
+ }=0A=
+ if (h.indexOf("www.")=3D=3D0) h=3Dh.substring(4,h.length);=0A=
+ return =
+"utmccn=3D(referral)|utmcsr=3D"+_uEC(h)+"|"+"utmcct=3D"+_uEC(k)+"|utmcmd=3D=
+referral";=0A=
+}=0A=
+function _uOrg(t) {=0A=
+ if (_ur=3D=3D"0" || _ur=3D=3D"" || _ur=3D=3D"-") return "";=0A=
+ var i=3D0,h,k;=0A=
+ if ((i=3D_ur.indexOf("://")) < 0) return "";=0A=
+ h=3D_ur.substring(i+3,_ur.length);=0A=
+ if (h.indexOf("/") > -1) {=0A=
+  h=3Dh.substring(0,h.indexOf("/"));=0A=
+ }=0A=
+ for (var ii=3D0;ii<_uOsr.length;ii++) {=0A=
+  if (h.toLowerCase().indexOf(_uOsr[ii].toLowerCase()) > -1) {=0A=
+   if ((i=3D_ur.indexOf("?"+_uOkw[ii]+"=3D")) > -1 || =
+(i=3D_ur.indexOf("&"+_uOkw[ii]+"=3D")) > -1) {=0A=
+    k=3D_ur.substring(i+_uOkw[ii].length+2,_ur.length);=0A=
+    if ((i=3Dk.indexOf("&")) > -1) k=3Dk.substring(0,i);=0A=
+    for (var yy=3D0;yy<_uOno.length;yy++) {=0A=
+     if (_uOno[yy].toLowerCase()=3D=3Dk.toLowerCase()) { _ufno=3D1; =
+break; }=0A=
+    }=0A=
+    if (t) return _uEC(k);=0A=
+    else return =
+"utmccn=3D(organic)|utmcsr=3D"+_uEC(_uOsr[ii])+"|"+"utmctr=3D"+_uEC(k)+"|=
+utmcmd=3Dorganic";=0A=
+   }=0A=
+  }=0A=
+ }=0A=
+ return "";=0A=
+}=0A=
+function _uBInfo() {=0A=
+ var sr=3D"-",sc=3D"-",ul=3D"-",fl=3D"-",cs=3D"-",je=3D1;=0A=
+ var n=3Dnavigator;=0A=
+ if (self.screen) {=0A=
+  sr=3Dscreen.width+"x"+screen.height;=0A=
+  sc=3Dscreen.colorDepth+"-bit";=0A=
+ } else if (self.java) {=0A=
+  var j=3Djava.awt.Toolkit.getDefaultToolkit();=0A=
+  var s=3Dj.getScreenSize();=0A=
+  sr=3Ds.width+"x"+s.height;=0A=
+ }=0A=
+ if (n.language) { ul=3Dn.language.toLowerCase(); }=0A=
+ else if (n.browserLanguage) { ul=3Dn.browserLanguage.toLowerCase(); }=0A=
+ je=3Dn.javaEnabled()?1:0;=0A=
+ if (_uflash) fl=3D_uFlash();=0A=
+ if (_ubd.characterSet) cs=3D_uES(_ubd.characterSet);=0A=
+ else if (_ubd.charset) cs=3D_uES(_ubd.charset);=0A=
+ return =
+"&utmcs=3D"+cs+"&utmsr=3D"+sr+"&utmsc=3D"+sc+"&utmul=3D"+ul+"&utmje=3D"+j=
+e+"&utmfl=3D"+fl;=0A=
+}=0A=
+function __utmSetTrans() {=0A=
+ var e;=0A=
+ if (_ubd.getElementById) e=3D_ubd.getElementById("utmtrans");=0A=
+ else if (_ubd.utmform && _ubd.utmform.utmtrans) =
+e=3D_ubd.utmform.utmtrans;=0A=
+ if (!e) return;=0A=
+ var l=3De.value.split("UTM:");=0A=
+ var i,i2,c;=0A=
+ if (_userv=3D=3D0 || _userv=3D=3D2) i=3Dnew Array();=0A=
+ if (_userv=3D=3D1 || _userv=3D=3D2) { i2=3Dnew Array(); c=3D_uGCS(); }=0A=
+=0A=
+ for (var ii=3D0;ii<l.length;ii++) {=0A=
+  l[ii]=3D_uTrim(l[ii]);=0A=
+  if (l[ii].charAt(0)!=3D'T' && l[ii].charAt(0)!=3D'I') continue;=0A=
+  var r=3DMath.round(Math.random()*2147483647);=0A=
+  if (!_utsp || _utsp=3D=3D"") _utsp=3D"|";=0A=
+  var f=3Dl[ii].split(_utsp),s=3D"";=0A=
+  if (f[0].charAt(0)=3D=3D'T') {=0A=
+   s=3D"&utmt=3Dtran"+"&utmn=3D"+r;=0A=
+   f[1]=3D_uTrim(f[1]); if(f[1]&&f[1]!=3D"") =
+s+=3D"&utmtid=3D"+_uES(f[1]);=0A=
+   f[2]=3D_uTrim(f[2]); if(f[2]&&f[2]!=3D"") =
+s+=3D"&utmtst=3D"+_uES(f[2]);=0A=
+   f[3]=3D_uTrim(f[3]); if(f[3]&&f[3]!=3D"") =
+s+=3D"&utmtto=3D"+_uES(f[3]);=0A=
+   f[4]=3D_uTrim(f[4]); if(f[4]&&f[4]!=3D"") =
+s+=3D"&utmttx=3D"+_uES(f[4]);=0A=
+   f[5]=3D_uTrim(f[5]); if(f[5]&&f[5]!=3D"") =
+s+=3D"&utmtsp=3D"+_uES(f[5]);=0A=
+   f[6]=3D_uTrim(f[6]); if(f[6]&&f[6]!=3D"") =
+s+=3D"&utmtci=3D"+_uES(f[6]);=0A=
+   f[7]=3D_uTrim(f[7]); if(f[7]&&f[7]!=3D"") =
+s+=3D"&utmtrg=3D"+_uES(f[7]);=0A=
+   f[8]=3D_uTrim(f[8]); if(f[8]&&f[8]!=3D"") =
+s+=3D"&utmtco=3D"+_uES(f[8]);=0A=
+  } else {=0A=
+   s=3D"&utmt=3Ditem"+"&utmn=3D"+r;=0A=
+   f[1]=3D_uTrim(f[1]); if(f[1]&&f[1]!=3D"") =
+s+=3D"&utmtid=3D"+_uES(f[1]);=0A=
+   f[2]=3D_uTrim(f[2]); if(f[2]&&f[2]!=3D"") =
+s+=3D"&utmipc=3D"+_uES(f[2]);=0A=
+   f[3]=3D_uTrim(f[3]); if(f[3]&&f[3]!=3D"") =
+s+=3D"&utmipn=3D"+_uES(f[3]);=0A=
+   f[4]=3D_uTrim(f[4]); if(f[4]&&f[4]!=3D"") =
+s+=3D"&utmiva=3D"+_uES(f[4]);=0A=
+   f[5]=3D_uTrim(f[5]); if(f[5]&&f[5]!=3D"") =
+s+=3D"&utmipr=3D"+_uES(f[5]);=0A=
+   f[6]=3D_uTrim(f[6]); if(f[6]&&f[6]!=3D"") =
+s+=3D"&utmiqt=3D"+_uES(f[6]);=0A=
+  }=0A=
+  if ((_userv=3D=3D0 || _userv=3D=3D2) && _uSP()) {=0A=
+   i[ii]=3Dnew Image(1,1);=0A=
+   i[ii].src=3D_ugifpath+"?"+"utmwv=3D"+_uwv+s;=0A=
+   i[ii].onload=3Dfunction() { _uVoid(); }=0A=
+  }=0A=
+  if ((_userv=3D=3D1 || _userv=3D=3D2) && _uSP()) {=0A=
+   i2[ii]=3Dnew Image(1,1);=0A=
+   =
+i2[ii].src=3D_ugifpath2+"?"+"utmwv=3D"+_uwv+s+"&utmac=3D"+_uacct+"&utmcc=3D=
+"+c;=0A=
+   i2[ii].onload=3Dfunction() { _uVoid(); }=0A=
+  }=0A=
+ }=0A=
+ return;=0A=
+}=0A=
+function _uFlash() {=0A=
+ var f=3D"-",n=3Dnavigator;=0A=
+ if (n.plugins && n.plugins.length) {=0A=
+  for (var ii=3D0;ii<n.plugins.length;ii++) {=0A=
+   if (n.plugins[ii].name.indexOf('Shockwave Flash')!=3D-1) {=0A=
+    f=3Dn.plugins[ii].description.split('Shockwave Flash ')[1];=0A=
+    break;=0A=
+   }=0A=
+  }=0A=
+ } else if (window.ActiveXObject) {=0A=
+  for (var ii=3D10;ii>=3D2;ii--) {=0A=
+   try {=0A=
+    var fl=3Deval("new =
+ActiveXObject('ShockwaveFlash.ShockwaveFlash."+ii+"');");=0A=
+    if (fl) { f=3Dii + '.0'; break; }=0A=
+   }=0A=
+   catch(e) {}=0A=
+  }=0A=
+ }=0A=
+ return f;=0A=
+}=0A=
+function __utmLinker(l,h) {=0A=
+ if (!_ulink) return;=0A=
+ var p,k,a=3D"-",b=3D"-",c=3D"-",x=3D"-",z=3D"-",v=3D"-";=0A=
+ var dc=3D_ubd.cookie;=0A=
+ if (!l || l=3D=3D"") return;=0A=
+ var iq =3D l.indexOf("?"); =0A=
+ var ih =3D l.indexOf("#"); =0A=
+ if (dc) {=0A=
+  a=3D_uES(_uGC(dc,"__utma=3D"+_udh,";"));=0A=
+  b=3D_uES(_uGC(dc,"__utmb=3D"+_udh,";"));=0A=
+  c=3D_uES(_uGC(dc,"__utmc=3D"+_udh,";"));=0A=
+  x=3D_uES(_uGC(dc,"__utmx=3D"+_udh,";"));=0A=
+  z=3D_uES(_uGC(dc,"__utmz=3D"+_udh,";"));=0A=
+  v=3D_uES(_uGC(dc,"__utmv=3D"+_udh,";"));=0A=
+  k=3D(_uHash(a+b+c+x+z+v)*1)+(_udh*1);=0A=
+  =
+p=3D"__utma=3D"+a+"&__utmb=3D"+b+"&__utmc=3D"+c+"&__utmx=3D"+x+"&__utmz=3D=
+"+z+"&__utmv=3D"+v+"&__utmk=3D"+k;=0A=
+ }=0A=
+ if (p) {=0A=
+  if (h && ih>-1) return;=0A=
+  if (h) { _udl.href=3Dl+"#"+p; }=0A=
+  else {=0A=
+   if (iq=3D=3D-1 && ih=3D=3D-1) _udl.href=3Dl+"?"+p;=0A=
+   else if (ih=3D=3D-1) _udl.href=3Dl+"&"+p;=0A=
+   else if (iq=3D=3D-1) =
+_udl.href=3Dl.substring(0,ih-1)+"?"+p+l.substring(ih);=0A=
+   else _udl.href=3Dl.substring(0,ih-1)+"&"+p+l.substring(ih);=0A=
+  }=0A=
+ } else { _udl.href=3Dl; }=0A=
+}=0A=
+function __utmLinkPost(f,h) {=0A=
+ if (!_ulink) return;=0A=
+ var p,k,a=3D"-",b=3D"-",c=3D"-",x=3D"-",z=3D"-",v=3D"-";=0A=
+ var dc=3D_ubd.cookie;=0A=
+ if (!f || !f.action) return;=0A=
+ var iq =3D f.action.indexOf("?"); =0A=
+ var ih =3D f.action.indexOf("#"); =0A=
+ if (dc) {=0A=
+  a=3D_uES(_uGC(dc,"__utma=3D"+_udh,";"));=0A=
+  b=3D_uES(_uGC(dc,"__utmb=3D"+_udh,";"));=0A=
+  c=3D_uES(_uGC(dc,"__utmc=3D"+_udh,";"));=0A=
+  x=3D_uES(_uGC(dc,"__utmx=3D"+_udh,";"));=0A=
+  z=3D_uES(_uGC(dc,"__utmz=3D"+_udh,";"));=0A=
+  v=3D_uES(_uGC(dc,"__utmv=3D"+_udh,";"));=0A=
+  k=3D(_uHash(a+b+c+x+z+v)*1)+(_udh*1);=0A=
+  =
+p=3D"__utma=3D"+a+"&__utmb=3D"+b+"&__utmc=3D"+c+"&__utmx=3D"+x+"&__utmz=3D=
+"+z+"&__utmv=3D"+v+"&__utmk=3D"+k;=0A=
+ }=0A=
+ if (p) {=0A=
+  if (h && ih>-1) return;=0A=
+  if (h) { f.action+=3D"#"+p; }=0A=
+  else {=0A=
+   if (iq=3D=3D-1 && ih=3D=3D-1) f.action+=3D"?"+p;=0A=
+   else if (ih=3D=3D-1) f.action+=3D"&"+p;=0A=
+   else if (iq=3D=3D-1) =
+f.action=3Df.action.substring(0,ih-1)+"?"+p+f.action.substring(ih);=0A=
+   else =
+f.action=3Df.action.substring(0,ih-1)+"&"+p+f.action.substring(ih);=0A=
+  }=0A=
+ }=0A=
+ return;=0A=
+}=0A=
+function __utmSetVar(v) {=0A=
+ if (!v || v=3D=3D"") return;=0A=
+ if (!_udo || _udo =3D=3D "") {=0A=
+  _udh=3D_uDomain();=0A=
+  if (_udn && _udn!=3D"") { _udo=3D" domain=3D"+_udn+";"; }=0A=
+ }=0A=
+ if (!_uVG()) return;=0A=
+ var r=3DMath.round(Math.random() * 2147483647);=0A=
+ _ubd.cookie=3D"__utmv=3D"+_udh+"."+_uES(v)+"; path=3D"+_utcp+"; =
+expires=3DSun, 18 Jan 2038 00:00:00 GMT;"+_udo;=0A=
+ var s=3D"&utmt=3Dvar&utmn=3D"+r;=0A=
+ if ((_userv=3D=3D0 || _userv=3D=3D2) && _uSP()) {=0A=
+  var i=3Dnew Image(1,1);=0A=
+  i.src=3D_ugifpath+"?"+"utmwv=3D"+_uwv+s;=0A=
+  i.onload=3Dfunction() { _uVoid(); }=0A=
+ }=0A=
+ if ((_userv=3D=3D1 || _userv=3D=3D2) && _uSP()) {=0A=
+  var i2=3Dnew Image(1,1);=0A=
+  =
+i2.src=3D_ugifpath2+"?"+"utmwv=3D"+_uwv+s+"&utmac=3D"+_uacct+"&utmcc=3D"+=
+_uGCS();=0A=
+  i2.onload=3Dfunction() { _uVoid(); }=0A=
+ }=0A=
+}=0A=
+function _uGCS() {=0A=
+ var t,c=3D"",dc=3D_ubd.cookie;=0A=
+ if ((t=3D_uGC(dc,"__utma=3D"+_udh,";"))!=3D"-") =
+c+=3D_uES("__utma=3D"+t+";+");=0A=
+ if ((t=3D_uGC(dc,"__utmb=3D"+_udh,";"))!=3D"-") =
+c+=3D_uES("__utmb=3D"+t+";+");=0A=
+ if ((t=3D_uGC(dc,"__utmc=3D"+_udh,";"))!=3D"-") =
+c+=3D_uES("__utmc=3D"+t+";+");=0A=
+ if ((t=3D_uGC(dc,"__utmx=3D"+_udh,";"))!=3D"-") =
+c+=3D_uES("__utmx=3D"+t+";+");=0A=
+ if ((t=3D_uGC(dc,"__utmz=3D"+_udh,";"))!=3D"-") =
+c+=3D_uES("__utmz=3D"+t+";+");=0A=
+ if ((t=3D_uGC(dc,"__utmv=3D"+_udh,";"))!=3D"-") =
+c+=3D_uES("__utmv=3D"+t+";");=0A=
+ if (c.charAt(c.length-1)=3D=3D"+") c=3Dc.substring(0,c.length-1);=0A=
+ return c;=0A=
+}=0A=
+function _uGC(l,n,s) {=0A=
+ if (!l || l=3D=3D"" || !n || n=3D=3D"" || !s || s=3D=3D"") return "-";=0A=
+ var i,i2,i3,c=3D"-";=0A=
+ i=3Dl.indexOf(n);=0A=
+ i3=3Dn.indexOf("=3D")+1;=0A=
+ if (i > -1) {=0A=
+  i2=3Dl.indexOf(s,i); if (i2 < 0) { i2=3Dl.length; }=0A=
+  c=3Dl.substring((i+i3),i2);=0A=
+ }=0A=
+ return c;=0A=
+}=0A=
+function _uDomain() {=0A=
+ if (!_udn || _udn=3D=3D"" || _udn=3D=3D"none") { _udn=3D""; return 1; }=0A=
+ if (_udn=3D=3D"auto") {=0A=
+  var d=3D_ubd.domain;=0A=
+  if (d.substring(0,4)=3D=3D"www.") {=0A=
+   d=3Dd.substring(4,d.length);=0A=
+  }=0A=
+  _udn=3Dd;=0A=
+ }=0A=
+ if (_uhash=3D=3D"off") return 1;=0A=
+ return _uHash(_udn);=0A=
+}=0A=
+function _uHash(d) {=0A=
+ if (!d || d=3D=3D"") return 1;=0A=
+ var h=3D0,g=3D0;=0A=
+ for (var i=3Dd.length-1;i>=3D0;i--) {=0A=
+  var c=3DparseInt(d.charCodeAt(i));=0A=
+  h=3D((h << 6) & 0xfffffff) + c + (c << 14);=0A=
+  if ((g=3Dh & 0xfe00000)!=3D0) h=3D(h ^ (g >> 21));=0A=
+ }=0A=
+ return h;=0A=
+}=0A=
+function _uFixA(c,s,t) {=0A=
+ if (!c || c=3D=3D"" || !s || s=3D=3D"" || !t || t=3D=3D"") return "-";=0A=
+ var a=3D_uGC(c,"__utma=3D"+_udh,s);=0A=
+ var lt=3D0,i=3D0;=0A=
+ if ((i=3Da.lastIndexOf(".")) > 9) {=0A=
+  _uns=3Da.substring(i+1,a.length);=0A=
+  _uns=3D(_uns*1)+1;=0A=
+  a=3Da.substring(0,i);=0A=
+  if ((i=3Da.lastIndexOf(".")) > 7) {=0A=
+   lt=3Da.substring(i+1,a.length);=0A=
+   a=3Da.substring(0,i);=0A=
+  }=0A=
+  if ((i=3Da.lastIndexOf(".")) > 5) {=0A=
+   a=3Da.substring(0,i);=0A=
+  }=0A=
+  a+=3D"."+lt+"."+t+"."+_uns;=0A=
+ }=0A=
+ return a;=0A=
+}=0A=
+function _uTrim(s) {=0A=
+  if (!s || s=3D=3D"") return "";=0A=
+  while ((s.charAt(0)=3D=3D' ') || (s.charAt(0)=3D=3D'\n') || =
+(s.charAt(0,1)=3D=3D'\r')) s=3Ds.substring(1,s.length);=0A=
+  while ((s.charAt(s.length-1)=3D=3D' ') || =
+(s.charAt(s.length-1)=3D=3D'\n') || (s.charAt(s.length-1)=3D=3D'\r')) =
+s=3Ds.substring(0,s.length-1);=0A=
+  return s;=0A=
+}=0A=
+function _uEC(s) {=0A=
+  var n=3D"";=0A=
+  if (!s || s=3D=3D"") return "";=0A=
+  for (var i=3D0;i<s.length;i++) {if (s.charAt(i)=3D=3D" ") n+=3D"+"; =
+else n+=3Ds.charAt(i);}=0A=
+  return n;=0A=
+}=0A=
+function __utmVisitorCode(f) {=0A=
+ var r=3D0,t=3D0,i=3D0,i2=3D0,m=3D31;=0A=
+ var a=3D_uGC(_ubd.cookie,"__utma=3D"+_udh,";");=0A=
+ if ((i=3Da.indexOf(".",0))<0) return;=0A=
+ if ((i2=3Da.indexOf(".",i+1))>0) r=3Da.substring(i+1,i2); else return =
+"";  =0A=
+ if ((i=3Da.indexOf(".",i2+1))>0) t=3Da.substring(i2+1,i); else return =
+"";  =0A=
+ if (f) {=0A=
+  return r;=0A=
+ } else {=0A=
+  var c=3Dnew =
+Array('A','B','C','D','E','F','G','H','J','K','L','M','N','P','R','S','T'=
+,'U','V','W','X','Y','Z','1','2','3','4','5','6','7','8','9');=0A=
+  return =
+c[r>>28&m]+c[r>>23&m]+c[r>>18&m]+c[r>>13&m]+"-"+c[r>>8&m]+c[r>>3&m]+c[((r=
+&7)<<2)+(t>>30&3)]+c[t>>25&m]+c[t>>20&m]+"-"+c[t>>15&m]+c[t>>10&m]+c[t>>5=
+&m]+c[t&m];=0A=
+ }=0A=
+}=0A=
+function _uIN(n) {=0A=
+ if (!n) return false;=0A=
+ for (var i=3D0;i<n.length;i++) {=0A=
+  var c=3Dn.charAt(i);=0A=
+  if ((c<"0" || c>"9") && (c!=3D".")) return false;=0A=
+ }=0A=
+ return true;=0A=
+}=0A=
+function _uES(s,u) {=0A=
+ if (typeof(encodeURIComponent) =3D=3D 'function') {=0A=
+  if (u) return encodeURI(s);=0A=
+  else return encodeURIComponent(s);=0A=
+ } else {=0A=
+  return escape(s);=0A=
+ }=0A=
+}=0A=
+function _uUES(s) {=0A=
+ if (typeof(decodeURIComponent) =3D=3D 'function') {=0A=
+  return decodeURIComponent(s);=0A=
+ } else {=0A=
+  return unescape(s);=0A=
+ }=0A=
+}=0A=
+function _uVG() {=0A=
+ if((_udn.indexOf("www.google.") =3D=3D 0 || _udn.indexOf(".google.") =
+=3D=3D 0 || _udn.indexOf("google.") =3D=3D 0) && _utcp=3D=3D'/') {=0A=
+  return false;=0A=
+ }=0A=
+ return true;=0A=
+}=0A=
+function _uSP() {=0A=
+ var s=3D100;=0A=
+ if (_usample) s=3D_usample;=0A=
+ if(s>=3D100 || s<=3D0) return true;=0A=
+ return ((__utmVisitorCode(1)%10000)<(s*100));=0A=
+}=0A=
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://www.nabble.com/static/analytics.js
+
+Nabble._uacct =3D "UA-91855-5";=0A=
+//Nabble.topicDumpSearch =3D true;=0A=
+Nabble.notRed =3D true;=0A=
+=0A=
+//Nabble.otherAd =3D "http://www.nuzmo.com/static/ad.js";=0A=
+=0A=
+Nabble.analytics =3D function() {=0A=
+	if( self !=3D top )=0A=
+		return;=0A=
+	if( navigator.cookieEnabled && !Nabble.getCookie("v") ) {=0A=
+		var query =3D Nabble.getSearchTerms2(document.referrer);=0A=
+		var visitCounter =3D "/util/VisitCounter.jtp?referrer=3D" + =
+encodeURIComponent(document.referrer);=0A=
+		var hostname;=0A=
+		if( query ) {=0A=
+			visitCounter +=3D "&query=3D" + query;=0A=
+			hostname =3D "search_engine";=0A=
+			Nabble.addSearchEngineChannel();=0A=
+		} else {=0A=
+			var a =3D /:\/\/(.*?)\//.exec(document.referrer);=0A=
+			hostname =3D a ? a[1] : 'none';=0A=
+		}=0A=
+		if( Nabble.isMailingListForum ) {=0A=
+			visitCounter +=3D "&ml=3Dy";=0A=
+		}=0A=
+		Nabble.loadScript(visitCounter);=0A=
+		Nabble.urchinTracker('/referrer/'+hostname);=0A=
+	}=0A=
+	var expires =3D new Date();=0A=
+	expires.setTime(expires.getTime()+30*60*1000);=0A=
+	document.cookie =3D "v=3Dx; expires=3D" + expires.toGMTString() + "; =
+path=3D/";=0A=
+	var page =3D Nabble.getPage();=0A=
+	Nabble.urchinTracker(page);=0A=
+};=0A=
+=0A=
+Nabble.getPage =3D function() {=0A=
+	switch( Nabble.page ) {=0A=
+=0A=
+	case 'forum.TopicDump':=0A=
+		return Nabble.mapPage('topic-dump');=0A=
+	case 'forum.ViewTopic':=0A=
+		return Nabble.mapPage('topic-framed');=0A=
+	case 'forum.ViewPost':=0A=
+		return Nabble.mapPage('post-page');=0A=
+	case 'forum.ForumTopics':=0A=
+		return Nabble.mapPage('forum-page');=0A=
+=0A=
+	case 'forum.NewTopic':=0A=
+	case 'forum.Reply':=0A=
+		Nabble.addHandler( Nabble.get('nabble.save'), 'onclick', =0A=
+			function(){Nabble.urchinTracker('/posted');}=0A=
+		);=0A=
+		return null;=0A=
+=0A=
+	case 'user.Login':=0A=
+		Nabble.urchinTracker('/login/'+Nabble.status);=0A=
+		return null;=0A=
+=0A=
+	case 'user.Register':=0A=
+		=
+Nabble.urchinTracker('/register/'+(Nabble.errorMsg=3D=3Dnull?'start':'err=
+or/'+Nabble.errorMsg));=0A=
+		return null;=0A=
+	case 'user.Register2':=0A=
+		Nabble.urchinTracker('/register/mailed');=0A=
+		return null;=0A=
+	case 'user.Register3':=0A=
+		if( Nabble.status )=0A=
+			Nabble.urchinTracker('/register/'+Nabble.status);=0A=
+		return null;=0A=
+=0A=
+	case 'forum.Search':=0A=
+		Nabble.addSearchedChannel();  // for AdSense=0A=
+		if( location.search.match(/[?&]matchingForums=3Da/) )=0A=
+			return '/search/matchingForums'+location.search;=0A=
+		if( location.search.match(/[?&]local=3D/) )=0A=
+			return '/search/1'+location.search;=0A=
+		return '/search/2'+location.search;=0A=
+=0A=
+	case 'Index':=0A=
+		var t =3D Nabble.get('nabble.new-forum-link')=0A=
+		if(t) {=0A=
+			Nabble.addHandler( t, 'onclick', =0A=
+				function(){Nabble.urchinTracker('/new_forum_link');}=0A=
+			);=0A=
+		}=0A=
+		return null;=0A=
+=0A=
+	default:=0A=
+		return null;=0A=
+	}=0A=
+};=0A=
+=0A=
+Nabble.mapPage =3D function(page) {=0A=
+	return '/mapped/' + page + document.location.pathname;=0A=
+};=0A=
+=0A=
+Nabble.analyticsForRedirect =3D function() {=0A=
+	switch( Nabble.page ) {=0A=
+=0A=
+	case 'user.Login':=0A=
+		Nabble.urchinTracker('/login/done');=0A=
+		break;=0A=
+=0A=
+	case 'catalog.NewForum':=0A=
+		if( !Nabble.isModerator )=0A=
+			Nabble.urchinTracker('/forum_created');=0A=
+		break;=0A=
+=0A=
+	}=0A=
+};=0A=
+=0A=
+Nabble.analyticsForTopicDumpSearch =3D function() {=0A=
+	var fn =3D function(){=0A=
+		Nabble.addSearchedChannel();=0A=
+		Nabble.urchinTracker('/topic_search_link');=0A=
+	}=0A=
+	var a =3D Nabble.get('nabble.searchResults').getElementsByTagName("a");=0A=
+	for( var i=3D0; i<a.length-1; i++ ) {  // last is "more" link=0A=
+		Nabble.addHandler( a[i], 'onclick', fn );=0A=
+	}=0A=
+}=0A=
+=0A=
+=0A=
+Nabble.urchinTracker =3D function(page) {=0A=
+	if( typeof(urchinTracker) !=3D "undefined" ) {=0A=
+		_uacct =3D Nabble._uacct;=0A=
+		urchinTracker(page);=0A=
+	}=0A=
+};=0A=
+=0A=
+=0A=
+// AdSense=0A=
+=0A=
+Nabble.ads =3D function() {=0A=
+	google_color_border =3D "CCCCCC";=0A=
+	google_color_bg =3D "FFFFFF";=0A=
+	google_color_link =3D "333333";=0A=
+	google_color_text =3D "333333";=0A=
+	google_color_url =3D "666666";=0A=
+=0A=
+	document.write('<div class=3D"ad">');=0A=
+	if( Nabble.otherAd && Math.random() > 0.5 ) {=0A=
+		document.write('<script type=3D"text/javascript"');=0A=
+		document.write('  src=3D"' + Nabble.otherAd + '">');=0A=
+		document.write('<'+'/script>');=0A=
+	} else {=0A=
+		google_ad_client =3D "pub-6703598369329977";=0A=
+		google_ad_width =3D 728;=0A=
+		google_ad_height =3D 90;=0A=
+		google_ad_format =3D "728x90_as";=0A=
+		google_ad_type =3D "text";=0A=
+		google_ad_channel =3D Nabble.getChannels();=0A=
+		document.write('<script type=3D"text/javascript"');=0A=
+		document.write('  =
+src=3D"http://pagead2.googlesyndication.com/pagead/show_ads.js">');=0A=
+		document.write('<'+'/script>');=0A=
+	}=0A=
+	document.write('</div>');=0A=
+};=0A=
+=0A=
+Nabble.getChannels =3D function() {=0A=
+	var channels =3D Nabble.getCookie("channels");=0A=
+	return channels=3D=3Dnull ? "" : channels;=0A=
+};=0A=
+=0A=
+Nabble.addChannel =3D function(channel) {=0A=
+	var channels =3D Nabble.getCookie("channels");=0A=
+	if( channels=3D=3Dnull ) {=0A=
+		channels =3D channel;=0A=
+	} else {=0A=
+		if( channels.indexOf(channel) > -1 )=0A=
+			return;=0A=
+		channels +=3D "+" + channel;=0A=
+	}=0A=
+	Nabble.setCookie("channels",channels);=0A=
+};=0A=
+=0A=
+Nabble.addSearchedChannel =3D function() {=0A=
+	Nabble.addChannel("2530262431");=0A=
+};=0A=
+=0A=
+Nabble.addSearchEngineChannel =3D function() {=0A=
+	Nabble.addChannel("4893802913");=0A=
+};=0A=
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://www.nabble.com/forum/TopicDump$Js.jtp?topic=1338578&rating=2&forum=1160&p=3578549&p=3698922&p=3726056&p=3727549&p=3732233&p=3790781&u=19981&u=19067&u=19981&u=19067&u=19981&u=19981
+
+
+(function(){
+	var path =3D Nabble.get("nabble.path");
+	if( path )
+		path.innerHTML =3D ' <nobr><a =
+href=3D\"http://www.nabble.com/Software-f94.html\" target=3D\"_top\" =
+>Software</a></nobr> &#187; <nobr><a =
+href=3D\"http://www.nabble.com/gcc-f1154.html\" target=3D\"_top\" =
+>gcc</a></nobr> &#187; <nobr><a =
+href=3D\"http://www.nabble.com/gcc---patches-f1160.html\" =
+target=3D\"_top\" >gcc - patches</a></nobr>';
+})();
+
+Nabble.isFlagged =3D new Object();
+Nabble.ratedStars =3D new Object();
+
+Nabble.isFlagged[3578549] =3D false;
+Nabble.showFlag(3578549);
+
+Nabble.ratedStars[3578549] =3D 0;
+Nabble.mouseout(3578549);
+
+Nabble.isFlagged[3698922] =3D false;
+Nabble.showFlag(3698922);
+
+Nabble.ratedStars[3698922] =3D 0;
+Nabble.mouseout(3698922);
+
+Nabble.isFlagged[3726056] =3D false;
+Nabble.showFlag(3726056);
+
+Nabble.ratedStars[3726056] =3D 0;
+Nabble.mouseout(3726056);
+
+Nabble.isFlagged[3727549] =3D false;
+Nabble.showFlag(3727549);
+
+Nabble.ratedStars[3727549] =3D 0;
+Nabble.mouseout(3727549);
+
+Nabble.isFlagged[3732233] =3D false;
+Nabble.showFlag(3732233);
+
+Nabble.ratedStars[3732233] =3D 0;
+Nabble.mouseout(3732233);
+
+Nabble.isFlagged[3790781] =3D false;
+Nabble.showFlag(3790781);
+
+Nabble.ratedStars[3790781] =3D 0;
+Nabble.mouseout(3790781);
+
+------=_NextPart_000_0000_01C77697.E3F7B6F0--

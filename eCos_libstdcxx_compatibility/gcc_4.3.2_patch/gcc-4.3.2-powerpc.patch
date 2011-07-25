@@ -1,0 +1,41 @@
+diff -x CVS -x .svn -x '*~' -x '.#*' -urpN gcc-4.3.2.clean/gcc/config/rs6000/e500.h gcc-4.3.2/gcc/config/rs6000/e500.h
+--- gcc-4.3.2.clean/gcc/config/rs6000/e500.h	2007-08-02 11:49:31.000000000 +0100
++++ gcc-4.3.2/gcc/config/rs6000/e500.h	2008-07-07 05:33:48.000000000 +0100
+@@ -24,6 +24,16 @@
+ #undef TARGET_E500_SINGLE
+ #undef TARGET_E500_DOUBLE
+ #undef CHECK_E500_OPTIONS
++#undef SUBSUBTARGET_OVERRIDE_OPTIONS
++
++#define SUBSUBTARGET_OVERRIDE_OPTIONS                                   \
++do {                                                                    \
++  if ((TARGET_DEFAULT ^ target_flags) & MASK_64BIT)                     \
++    error ("-m%s not supported in this configuration",                  \
++           (target_flags & MASK_64BIT) ? "64" : "32");                  \
++  if (TARGET_E500 && TARGET_HARD_FLOAT && !rs6000_explicit_options.float_gprs) \
++    rs6000_float_gprs = 1;                                              \
++} while (0)
+ 
+ #define TARGET_SPE_ABI rs6000_spe_abi
+ #define TARGET_SPE rs6000_spe
+diff -x CVS -x .svn -x '*~' -x '.#*' -urpN gcc-4.3.2.clean/gcc/config/rs6000/t-ppcgas gcc-4.3.2/gcc/config/rs6000/t-ppcgas
+--- gcc-4.3.2.clean/gcc/config/rs6000/t-ppcgas	2003-04-13 17:59:45.000000000 +0100
++++ gcc-4.3.2/gcc/config/rs6000/t-ppcgas	2008-07-07 03:55:29.000000000 +0100
+@@ -2,11 +2,15 @@
+ 
+ MULTILIB_OPTIONS	= msoft-float \
+ 			  mlittle/mbig \
+-			  fleading-underscore
++			  mcpu=8540
++
++#			  fleading-underscore
+ 
+ MULTILIB_DIRNAMES	= nof \
+ 			  le be \
+-			  und
++			  booke
++
++#			  und
+ 
+ MULTILIB_EXTRA_OPTS	= mrelocatable-lib mno-eabi mstrict-align
+ 

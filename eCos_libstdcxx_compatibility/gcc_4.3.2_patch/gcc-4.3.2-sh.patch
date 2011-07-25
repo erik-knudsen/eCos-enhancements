@@ -1,0 +1,11 @@
+--- gcc-4.3.2.clean/gcc/config.gcc	2008-06-09 17:32:15.000000000 +0100
++++ gcc-4.3.2/gcc/config.gcc	2009-01-21 20:08:20.000000000 +0000
+@@ -2283,7 +2283,7 @@ sh-*-symbianelf* | sh[12346l]*-*-symbian
+ 		sh-superh-*)	sh_multilibs=m4,m4-single,m4-single-only,m4-nofpu ;;
+ 		sh*-*-linux*)	sh_multilibs=m1,m3e,m4 ;;
+ 		sh*-*-netbsd*)	sh_multilibs=m3,m3e,m4 ;;
+-		*) sh_multilibs=m1,m2,m2e,m4,m4-single,m4-single-only,m2a,m2a-single ;;
++		*) sh_multilibs=m1,m2,m2e,m3,m4,m4-single,m4-single-only,m2a,m2a-single ;;
+ 		esac
+ 		if test x$with_fp = xno; then
+ 			sh_multilibs="`echo $sh_multilibs|sed -e s/m4/sh4-nofpu/ -e s/,m4-[^,]*//g -e s/,m[23]e// -e s/m2a,m2a-single/m2a-nofpu/ -e s/m5-..m....,//g`"

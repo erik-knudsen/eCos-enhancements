@@ -1,0 +1,121 @@
+# ====================================================================
+#
+#      libstdcxx.cdl
+#
+#      Support for libstdcxx
+#
+# ====================================================================
+#####ECOSGPLCOPYRIGHTBEGIN####
+## -------------------------------------------
+## This file is part of eCos, the Embedded Configurable Operating System.
+## Copyright (C) 2003 Savin Zlobec 
+##
+## eCos is free software; you can redistribute it and/or modify it under
+## the terms of the GNU General Public License as published by the Free
+## Software Foundation; either version 2 or (at your option) any later version.
+##
+## eCos is distributed in the hope that it will be useful, but WITHOUT ANY
+## WARRANTY; without even the implied warranty of MERCHANTABILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with eCos; if not, write to the Free Software Foundation, Inc.,
+## 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
+##
+## As a special exception, if other files instantiate templates or use macros
+## or inline functions from this file, or you compile this file and link it
+## with other works to produce a work based on this file, this file does not
+## by itself cause the resulting work to be covered by the GNU General Public
+## License. However the source code for this file must still be made available
+## in accordance with section (3) of the GNU General Public License.
+##
+## This exception does not invalidate any other reasons why a work based on
+## this file might be covered by the GNU General Public License.
+##
+## -------------------------------------------
+#####ECOSGPLCOPYRIGHTEND####
+# ====================================================================
+######DESCRIPTIONBEGIN####
+#
+# Author(s):      eak 
+# Contributors:   
+# Date:           2007-08-30
+#
+#####DESCRIPTIONEND####
+# ====================================================================
+
+cdl_package CYGPKG_LIBSTDCXX {
+    display         "Support for libstdcxx in eCos"
+    define_header   libstdcxx.h
+    description   "
+        libstdcxx support (exceptions, multithreading etc.)" 
+
+	parent			CYGPKG_INFRA
+    
+    compile         gcc_ecos_multithread.cxx
+
+    # ========================================================================
+    # libstdcxx configuration
+    cdl_component CYGIMP_SERVICES_LIBSTDCXX_SUPPORT {
+        display       "libstdcxx support"
+        flavor          bool
+		active_if      (CYGPKG_LIBC && CYGPKG_IO_FILEIO && CYGPKG_MEMALLOC)
+        default_value 0
+        description   "
+            Enabling this option causes the inclusion of routines
+            to be used when libstdcxx should be supported."
+            
+		cdl_interface CYGIMP_SERVICES_LIBSTDCXX_THREADS_COMPATIBLITY_CFG_1 {
+			requires 1 == CYGIMP_SERVICES_LIBSTDCXX_THREADS_COMPATIBLITY_CFG_1
+			no_define
+		}
+            
+		cdl_component CYGIMP_SERVICES_LIBSTDCXX_THREADS_COMPATIBILITY_NONE {
+			display       "No multithread support"
+			flavor         bool
+			default_value 1
+			implements    CYGIMP_SERVICES_LIBSTDCXX_THREADS_COMPATIBLITY_CFG_1
+			description   "
+				This configures the eCos library for no gcc multi-
+				thread support."			
+		}
+		cdl_component CYGIMP_SERVICES_LIBSTDCXX_THREADS_COMPATIBILITY_NATIVE {
+			display       "Native eCos multithread support"
+			flavor         bool
+			active_if      (CYGPKG_KERNEL)
+			default_value 0
+			implements    CYGIMP_SERVICES_LIBSTDCXX_THREADS_COMPATIBLITY_CFG_1
+			description   "
+				This configures the eCos library for native eCos
+				gcc multithread support."			
+
+			cdl_option CYGNUM_SERVICES_LIBSTDCXX_ETHREAD_DESTRUCTOR_ITERATIONS {
+			display          "Maximum number of iterations of key destructors"
+			flavor           data
+			legal_values     4 to 100
+			default_value    4
+			description      "Maximum number of iterations of key destructors allowed."
+			}
+
+			cdl_option CYGNUM_SERVICES_LIBSTDCXX_ETHREAD_KEYS_MAX {
+			display          "Maximum number of per-thread data keys allowed"
+			flavor           data
+			legal_values     128 to 65535
+			default_value    128
+			description      "Number of per-thread data keys supported."
+			}
+
+				cdl_option CYGNUM_SERVICES_LIBSTDCXX_ETHREAD_THREADS_MAX {
+			display          "Maximum number of threads allowed"
+			flavor           data
+			legal_values     64 to 1024
+			default_value    64
+			description      "Maximum number of threads supported."
+			}
+		}
+    }
+}
+
+# ====================================================================
+# End of libstdcxx.cdl

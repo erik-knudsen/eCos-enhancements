@@ -1,0 +1,161 @@
+# ====================================================================
+#
+#      spidermonkey.cdl
+#
+#      Spider Monkey Java Script configuration data
+#
+# ====================================================================
+## ####ECOSGPLCOPYRIGHTBEGIN####                                            
+## -------------------------------------------                              
+## This file is part of eCos, the Embedded Configurable Operating System.   
+## Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004 Free Software Foundation, Inc.
+##
+## eCos is free software; you can redistribute it and/or modify it under    
+## the terms of the GNU General Public License as published by the Free     
+## Software Foundation; either version 2 or (at your option) any later      
+## version.                                                                 
+##
+## eCos is distributed in the hope that it will be useful, but WITHOUT      
+## ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or    
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License    
+## for more details.                                                        
+##
+## You should have received a copy of the GNU General Public License        
+## along with eCos; if not, write to the Free Software Foundation, Inc.,    
+## 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.            
+##
+## As a special exception, if other files instantiate templates or use      
+## macros or inline functions from this file, or you compile this file      
+## and link it with other works to produce a work based on this file,       
+## this file does not by itself cause the resulting work to be covered by   
+## the GNU General Public License. However the source code for this file    
+## must still be made available in accordance with section (3) of the GNU   
+## General Public License v2.                                               
+##
+## This exception does not invalidate any other reasons why a work based    
+## on this file might be covered by the GNU General Public License.         
+## -------------------------------------------                              
+## ####ECOSGPLCOPYRIGHTEND####                                              
+# ====================================================================
+######DESCRIPTIONBEGIN####
+#
+# Author(s):      Erik Aagaard Knudsen 
+# Contributors:   
+# Date:           2010-02-25
+#
+#####DESCRIPTIONEND####
+#
+# ====================================================================
+
+cdl_package CYGPKG_SPIDERMONKEY {
+    display         "Spider Monkey Java Script interpreter"
+    requires        CYGPKG_INFRA
+    requires        CYGPKG_ISOINFRA
+    requires        CYGPKG_LIBC
+    requires        CYGPKG_LIBM
+    requires        CYGPKG_MEMALLOC
+    requires        CYGPKG_POSIX
+    include_dir   spidermonkey
+    description    "Spider Monkey (1.7.0). This version of Spider Monkey has
+	                been ported to eCos together with the needed functionality
+					from NSPR to make it thread safe. The keyword switch table
+					jsautokw.h, is included here pregenerated from jskeyword.tbl."
+    
+    compile                                             \
+	jsapi.c jsarena.c jsarray.c jsatom.c jsbool.c jscntxt.c jsdate.c jsdbgapi.c jsdhash.c \
+	jsdtoa.c jsemit.c jsexn.c jsfun.c jsgc.c jshash.c jsinterp.c jsiter.c jslock.c jslog2.c \
+	jslong.c jsmath.c jsnum.c jsobj.c jsopcode.c jsparse.c jsprf.c jsregexp.c jsscan.c \
+	jsscope.c jsscript.c jsstr.c jsutil.c jsxdrapi.c jsxml.c prmjtime.c \
+	prtpd.c ptsynch.c pratom.c
+
+    cdl_option      JS_BYTES_PER_INT {
+        display         "Bytes per int for this platform"
+        flavor          data
+        default_value   4
+        legal_values    2 4
+        description     "This option informs Spider Monkey about the number 
+                         of bytes used for an int on this platform. This
+						 figure is not available from eCos as a preprocessor
+						 macro."
+    }
+
+    cdl_option      JS_BYTES_PER_LONG {
+        display         "Bytes per long for this platform"
+        flavor          data
+        default_value   4
+        legal_values    4 8
+        description     "This option informs Spider Monkey about the number 
+                         of bytes used for a long on this platform. This
+						 figure is not available from eCos as a preprocessor
+						 macro."
+    }
+
+    cdl_option      JS_BYTES_PER_WORD {
+        display         "Bytes per word (void *) for this platform"
+        flavor          data
+        default_value   4
+        legal_values    4 8
+        description     "This option informs Spider Monkey about the number 
+                         of bytes used for a word (void *) on this platform. This
+						 figure is not available from eCos as a preprocessor
+						 macro."
+    }
+
+    cdl_option      JS_BITS_PER_DOUBLE {
+        display         "Bits per double for this platform"
+        flavor          data
+        default_value   64
+        description     "This option informs Spider Monkey about the number 
+                         of bits used for a double on this platform. This
+						 figure is not available from eCos as a preprocessor
+						 macro."
+    }
+
+    cdl_option      JS_STACK_GROWTH_DIRECTION {
+        display         "Stack growth direction"
+        flavor          data
+        default_value   0
+        legal_values    0 1
+        description     "This option informs Spider Monkey about the stack 
+                         growth direction on this platform. 0 grows down,
+						 1 grows up. This figure is not available from eCos
+						 as a preprocessor macro."
+    }
+
+    cdl_component CYGPKG_SPIDERMONKEY_OPTIONS {
+        display "Build options"
+        flavor  none
+        no_define
+        description   "
+	    Package specific build options including control over
+	    compiler flags used only in building this package,
+	    and details of which tests are built."
+
+
+        cdl_option CYGPKG_SPIDERMONKEY_CFLAGS_ADD {
+            display "Additional compiler flags"
+            flavor  data
+            no_define
+            default_value { "-DCROSS_COMPILE -DXP_UNIX -DXP_ECOS -DJS_HAS_FILE_OBJECT=0 -DJS_GCC_HAS_BUILTIN_CLZ=0 -DJS_THREADSAFE  -I$(PREFIX)/include/spidermonkey" }
+            description   "
+                This option modifies the set of compiler flags for
+                building the Spider Monkey package.
+                These flags are used in addition to the set of global flags."
+        }
+
+        cdl_option CYGPKG_SPIDERMONKEY_CFLAGS_REMOVE {
+            display "Suppressed compiler flags"
+            flavor  data
+            no_define
+            default_value { "" }
+            description   "
+                This option modifies the set of compiler flags for
+                building the SQLITE package.
+                These flags are removed from the set of global flags
+                if present."
+        }
+    }
+}
+
+# ====================================================================
+# End of spidermonkey.cdl

@@ -1,0 +1,9 @@
+
+package CYGPKG_SQLITE {
+	alias 		{ "SQLITE" sqlite }
+	directory	services/db/sqlite
+	script		sqlite.cdl
+        description "
+           This package contains SQLITE."
+}
+

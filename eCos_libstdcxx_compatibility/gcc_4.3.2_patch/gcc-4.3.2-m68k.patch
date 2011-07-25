@@ -1,0 +1,20 @@
+diff -x CVS -x .svn -x '*~' -x '.#*' -urpN gcc-4.3.2.clean/gcc/config/m68k/t-mlibs gcc-4.3.2/gcc/config/m68k/t-mlibs
+--- gcc-4.3.2.clean/gcc/config/m68k/t-mlibs	2007-02-09 13:47:25.000000000 +0000
++++ gcc-4.3.2/gcc/config/m68k/t-mlibs	2008-07-03 15:43:19.000000000 +0100
+@@ -95,3 +95,5 @@ MULTILIB_EXCEPTIONS := $(shell echo $(MU
+ 
+ LIBGCC = stmp-multilib
+ INSTALL_LIBGCC = install-multilib
++
++MULTILIB_EXTRA_OPTS = malign-int
+--- gcc-4.3.2.clean/gcc/config/m68k/m68k.md	2007-11-06 16:52:17.000000000 +0000
++++ gcc-4.3.2/gcc/config/m68k/m68k.md	2008-10-24 03:38:04.000000000 +0100
+@@ -1817,7 +1817,7 @@
+ 				which_alternative == 0 ? 4 : 0);
+   operands[0] = adjust_address (operands[0], SImode, 0);
+   if (TARGET_68020 || TARGET_COLDFIRE)
+-    return "move%.l %1,%3\;smi %2\;extb%.l %2\;move%.l %2,%0";
++    return "move%.l %1,%2\;move%.l %2,%3\;smi %2\;extb%.l %2\;move%.l %2,%0";
+   else
+     return "move%.l %1,%3\;smi %2\;ext%.w %2\;ext%.l %2\;move%.l %2,%0";
+ })

@@ -1,0 +1,91 @@
+Spider Monkey JS-1.7.0 has been ported to eCos. Compile with the following defines:
+
+* CROSS_COMPILE
+We are cross compiling.
+
+* XP_UNIX
+eCos is a unix like operating system.
+
+* XP_ECOS
+We compile for eCos. This is a new define for JS.
+
+* JS_HAS_FILE_OBJECT=0
+We do not include the JS file object.
+
+* JS_GCC_HAS_BUILTIN_CLZ=0
+No built in CLZ in GCC.
+
+* JS_THREADSAFE
+In case we want JS to be threadsafe.
+
+
+It has been necessary to change a few things in the JS sources:
+
+* In the file jsotypes.h line 70 add && !defined(XP_ECOS). The type uint does
+not exist in eCos. This is the only place where XP_ECOS is referred to.
+  
+* The file jsautocfg.h is created manually and not by jscpucfg.exe. Here is
+defined constants, which can be derived from eCos or are the same for all eCos
+platforms.
+
+* The file spidermonkey.h is the configuration file for eCos. It defines the following
+constants:
+
+o JS_BYTES_PER_INT
+Number of bytes per integer.
+
+o JS_BYTES_PER_LONG
+Number of bytes per long.
+
+o JS_BYTES_PER_WORD
+Number of bytes per void *.
+
+o JS_BYTES_PER_DOUBLE
+Number of bytes per double.
+
+o JS_STACK_GROWTH_DIRECTION
+Stack growth direction.
+
+These values depend on the platform and must be defined by the user, when
+configuring JS. They are used in the compilers pre processing phase and cannot
+easily be derived from eCos, although eCos of course indirectly knows their values.
+
+* JS depends on NSPR when JS_THREADSAFE is defined. In this implementation we use
+pthreads for multithreading. I have ported the required parts of NSPR:
+
+o Pratom.h and pratom.c
+Atomic increment/decrement.
+
+o Prcvar.h
+Conditional variables.
+
+o Primpl.h
+Type definition of locks and conditional variables.
+
+o Prinit.h
+Empty.
+
+o Prlock.h
+Locks.
+
+o Prthread.h
+Definitions for threads.
+
+o Prtpd.c
+Handling of thread private data.
+
+o Prtypes.h
+Definition of PR types.
+
+o ptsynch.c
+Synchronization.
+
+* A few warnings have been corrected:
+•	Jsapi.h: Line 217, 974, 975, 976, 977, 978, 1965 void added for no parameters.
+•	Jsinterp.h: Line 129 #if changed to #ifdef.
+•	Jslock.h: Line 145 void added for no parameters.
+•	Jsdtoa.c: Line 250 parentheses added.
+•	Jsgc.c: Line 909-910, 1203 macro handling corrected.
+•	Jslock.c: Line 227-229 macro handling.
+•	Jsmath.c: line 354, 358 not corrected.
+

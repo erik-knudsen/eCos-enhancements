@@ -1,0 +1,35 @@
+diff -x CVS -x .svn -x '*~' -x '.#*' -urpN gcc-4.3.2.clean/gcc/config/mips/t-isa3264 gcc-4.3.2/gcc/config/mips/t-isa3264
+--- gcc-4.3.2.clean/gcc/config/mips/t-isa3264	2007-08-01 07:21:43.000000000 +0100
++++ gcc-4.3.2/gcc/config/mips/t-isa3264	2008-07-06 23:57:11.000000000 +0100
+@@ -12,16 +12,18 @@ $(T)crtn.o: $(srcdir)/config/mips/crtn.a
+ 
+ # We must build libgcc2.a with -G 0, in case the user wants to link
+ # without the $gp register.
+-TARGET_LIBGCC2_CFLAGS = -G 0
++# Commented out by Jifl - instead -mno-extern-sdata should be adequate
++#TARGET_LIBGCC2_CFLAGS = -G 0
++TARGET_LIBGCC2_CFLAGS = -mno-extern-sdata
+ 
+ # Build the libraries for both hard and soft floating point
+ 
+ ifneq ($(filter MIPS_ABI_DEFAULT=ABI_EABI,$(tm_defines)),)
+-MULTILIB_OPTIONS = msoft-float EL/EB mips32/mips32r2/mips64
+-MULTILIB_DIRNAMES = soft-float el eb mips32 mips32r2 mips64
++MULTILIB_OPTIONS = msoft-float EL/EB mips32/mips32r2/mips64/mips2
++MULTILIB_DIRNAMES = soft-float el eb mips32 mips32r2 mips64 mips2
+ else
+-MULTILIB_OPTIONS = msoft-float/mfp64 EL/EB mips32/mips32r2/mips64
+-MULTILIB_DIRNAMES = soft-float fp64 el eb mips32 mips32r2 mips64
++MULTILIB_OPTIONS = msoft-float/mfp64 EL/EB mips32/mips32r2/mips64/mips2
++MULTILIB_DIRNAMES = soft-float fp64 el eb mips32 mips32r2 mips64/mips2
+ ifneq ($(filter MIPS_ISA_DEFAULT=33,$(tm_defines)),)
+ MULTILIB_EXCLUSIONS = mips32/mfp64 mips64/mfp64
+ else
+@@ -30,6 +32,7 @@ endif
+ endif
+ MULTILIB_MATCHES = EL=mel EB=meb
+ EXTRA_MULTILIB_PARTS = crtbegin.o crtend.o crti.o crtn.o
++MULTILIB_EXTRA_OPTS = mno-extern-sdata
+ 
+ LIBGCC = stmp-multilib
+ INSTALL_LIBGCC = install-multilib

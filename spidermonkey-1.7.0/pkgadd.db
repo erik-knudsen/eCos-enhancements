@@ -1,0 +1,9 @@
+
+package CYGPKG_SPIDERMONKEY {
+	alias 		{ "SPIDERMONKEY" spidermonkey }
+	directory	services/spidermonkey
+	script		spidermonkey.cdl
+        description "
+           This package contains SPIDERMONKEY."
+}
+

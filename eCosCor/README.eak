@@ -1,0 +1,40 @@
+Corrections to the eCos repository (Anonymous CVS Access 9-feb-2009).
+
+Corrections related to gcc 4.3.2:
+•	packages/language/c/libm/current/include/math.h. Syntax (keywords).
+
+Corrections to the i386 support in eCos:
+•	packages/hal/i386/arch/current/include/hal_io.h. Corrections to macros
+	with errors in their definition of assembler code.
+
+•	packages/hal/i386/arch/current/src/i386.ld. Add definitions of missing
+	linker section (eh_frame – used by exceptions – only DWARF2 exceptions)).
+
+•	packages/hal/i386/pc/current/include/pkgconf/*.ldi. Add missing linker
+	section (eh_frame – used by exceptions – only DWARF2 exceptions).
+
+•	packages/hal/i386/pc/current/include/plf_arch.h. Add support for ctrlc.
+
+•	packages/hal/i386/pcmb/current/cdl/hal_i386_pcmb.cdl. Add support for
+	PCI IDE instead of ISA IDE (in case you need to use the PCI i/f - only
+	rudimentarily tested).
+
+•	packages/hal/i386/pcmb/current/include/pcmb_io.h. Add support for PCI
+	IDE instead of ISA IDE (in case you need to use the PCI i/f - only
+	rudimentarily tested).
+
+•	Packages/hal/i386/pcmb/current/src/pcmb_io.c. Add support for PCI IDE
+	instead of ISA IDE (in case you need to use the PCI i/f - only
+	rudimentarily tested).
+
+Correction to ethernet support.
+•	packages/eth/rltk/8139/current/src/if_8139.c. Add support for Dlink DFE-538TX.
+
+Corrections to SQLITE support.
+•	packages/fs/fat/current/src/fatfs.c. Add support for lseek beyond eof.
+
+•	packages/compat/posix/current/cdl/posix.cdl. Add support for named POSIX semaphores.
+
+•	packages/compat/posix/current/src/sem.cxx. Add support for named POSIX semaphores.
+
+•	packages/compat/posix/current/tests/pnmsem.c. Add support for named POSIX semaphores.

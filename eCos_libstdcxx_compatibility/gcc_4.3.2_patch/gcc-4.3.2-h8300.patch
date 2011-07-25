@@ -1,0 +1,99 @@
+diff -x CVS -x .svn -x '*~' -x '.#*' -urpN gcc-4.3.2.clean/gcc/config/h8300/h8300.c gcc-4.3.2/gcc/config/h8300/h8300.c
+--- gcc-4.3.2.clean/gcc/config/h8300/h8300.c	2008-02-20 21:30:35.000000000 +0000
++++ gcc-4.3.2/gcc/config/h8300/h8300.c	2008-07-03 16:28:02.000000000 +0100
+@@ -1611,6 +1611,8 @@ print_operand (FILE *file, rtx x, int co
+ 	      break;
+ 	    case SImode:
+ 	    case SFmode:
++	    case DImode:
++	    case DFmode:
+ 	      fprintf (file, "%s", names_extended[REGNO (x)]);
+ 	      break;
+ 	    default:
+diff -x CVS -x .svn -x '*~' -x '.#*' -urpN gcc-4.3.2.clean/gcc/config/h8300/h8300.h gcc-4.3.2/gcc/config/h8300/h8300.h
+--- gcc-4.3.2.clean/gcc/config/h8300/h8300.h	2007-08-02 11:49:31.000000000 +0100
++++ gcc-4.3.2/gcc/config/h8300/h8300.h	2008-07-03 16:29:31.000000000 +0100
+@@ -182,10 +182,10 @@ extern const char * const *h8_reg_names;
+ #define LONG_TYPE_SIZE		32
+ #define LONG_LONG_TYPE_SIZE	64
+ #define FLOAT_TYPE_SIZE	32
+-#define DOUBLE_TYPE_SIZE	32
++#define DOUBLE_TYPE_SIZE	(TARGET_INT32 ? 64 : 32)
+ #define LONG_DOUBLE_TYPE_SIZE	DOUBLE_TYPE_SIZE
+ 
+-#define MAX_FIXED_MODE_SIZE	32
++#define MAX_FIXED_MODE_SIZE	(TARGET_INT32 ? 64 : 32)
+ 
+ /* Allocation boundary (in *bits*) for storing arguments in argument list.  */
+ #define PARM_BOUNDARY (TARGET_H8300H || TARGET_H8300S ? 32 : 16)
+@@ -1199,4 +1199,28 @@ extern int h8300_move_ratio;
+ #define SYMBOL_FLAG_EIGHTBIT_DATA	(SYMBOL_FLAG_MACH_DEP << 1)
+ #define SYMBOL_FLAG_TINY_DATA		(SYMBOL_FLAG_MACH_DEP << 2)
+ 
++/* Define this if most significant word of doubles is the lowest numbered.
++   This is always true, even when in little-endian mode.  */
++#define FLOAT_WORDS_BIG_ENDIAN 1
++#define LIBGCC2_
++
++/* If compling libgcc2.c make size macros compile time constants.  */
++#ifdef IN_LIBGCC2
++
++#undef DOUBLE_TYPE_SIZE
++#undef LONG_DOUBLE_TYPE_SIZE
++
++#if __INT_MAX__ == 32767
++#define DI SI
++#define DF SF
++#define DOUBLE_TYPE_SIZE 32
++#define FLOAT_ONLY
++#else
++#define DOUBLE_TYPE_SIZE 64
++#endif
++
++#define LONG_DOUBLE_TYPE_SIZE DOUBLE_TYPE_SIZE
++#endif
++
++
+ #endif /* ! GCC_H8300_H */
+diff -x CVS -x .svn -x '*~' -x '.#*' -urpN gcc-4.3.2.clean/gcc/config/h8300/t-h8300 gcc-4.3.2/gcc/config/h8300/t-h8300
+--- gcc-4.3.2.clean/gcc/config/h8300/t-h8300	2004-07-08 04:40:34.000000000 +0100
++++ gcc-4.3.2/gcc/config/h8300/t-h8300	2008-07-03 16:32:14.000000000 +0100
+@@ -9,16 +9,13 @@ LIB2FUNCS_EXTRA = \
+ 	$(srcdir)/config/h8300/popcounthi2.c \
+ 	$(srcdir)/config/h8300/fixunssfsi.c
+ 
+-# We do not have DF type, so fake out the libgcc2 compilation.
+-TARGET_LIBGCC2_CFLAGS = -DDF=SF
+-
+ # We want fine grained libraries, so use the new code to build the
+ # floating point emulation libraries.
+ FPBIT = fp-bit.c
++DPBIT = dp-bit.c
+ 
+ fp-bit.c: $(srcdir)/config/fp-bit.c
+-	echo '#define FLOAT' > fp-bit.c
+-	echo '#define FLOAT_ONLY' >> fp-bit.c
++	echo '#define FLOAT' >> fp-bit.c
+ 	echo '#define SMALL_MACHINE' >> fp-bit.c
+ 	echo '#ifdef __H8300__' >> fp-bit.c
+ 	echo '#define CMPtype HItype' >> fp-bit.c
+@@ -27,8 +24,17 @@ fp-bit.c: $(srcdir)/config/fp-bit.c
+ 	echo '#endif' >> fp-bit.c
+ 	cat $(srcdir)/config/fp-bit.c >> fp-bit.c
+ 
+-MULTILIB_OPTIONS = mh/ms/msx mn mint32
+-MULTILIB_DIRNAMES = h8300h h8300s h8sx normal int32
++dp-bit.c: $(srcdir)/config/fp-bit.c
++	echo '#define SMALL_MACHINE' >> dp-bit.c
++	echo '#ifdef __H8300__' >> dp-bit.c
++	echo '#define CMPtype HItype' >> dp-bit.c
++	echo '#else' >> dp-bit.c
++	echo '#define CMPtype SItype' >> dp-bit.c
++	echo '#endif' >> dp-bit.c
++	cat $(srcdir)/config/fp-bit.c >> dp-bit.c
++
++MULTILIB_OPTIONS = mh/ms/msx mint32
++MULTILIB_DIRNAMES = h8300h h8300s h8sx int32
+ MULTILIB_EXCEPTIONS = mint32 mn mn/mint32
+ 
+ LIBGCC = stmp-multilib

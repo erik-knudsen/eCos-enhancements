@@ -1,0 +1,9 @@
+--- gcc-4.3.2.clean/gcc/config/elfos.h	2007-08-02 11:49:31.000000000 +0100
++++ gcc-4.3.2/gcc/config/elfos.h	2008-09-23 16:59:27.000000000 +0100
+@@ -513,3 +513,6 @@ along with GCC; see the file COPYING3.  
+ #define ASM_OUTPUT_EXTERNAL(FILE, DECL, NAME) \
+   default_elf_asm_output_external (FILE, DECL, NAME)
+ #endif
++
++#undef NO_IMPLICIT_EXTERN_C
++#define NO_IMPLICIT_EXTERN_C 1

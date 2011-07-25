@@ -1,0 +1,13 @@
+--- gcc-4.3.2.clean/gcc/config/i386/i386elf.h	2007-08-02 11:49:31.000000000 +0100
++++ gcc-4.3.2/gcc/config/i386/i386elf.h	2008-07-03 16:20:20.000000000 +0100
+@@ -20,10 +20,6 @@ You should have received a copy of the G
+ along with GCC; see the file COPYING3.  If not see
+ <http://www.gnu.org/licenses/>.  */
+ 
+-/* Use stabs instead of DWARF debug format.  */
+-#undef  PREFERRED_DEBUGGING_TYPE
+-#define PREFERRED_DEBUGGING_TYPE DBX_DEBUG
+-
+ #define TARGET_VERSION fprintf (stderr, " (i386 bare ELF target)");
+ 
+ /* The ELF ABI for the i386 says that records and unions are returned

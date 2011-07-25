@@ -1,0 +1,368 @@
+Build a toolchain (with libstdcxx and thread support) for use with eCos
+***********************************************************************
+
+Introduction
+------------
+This procedure is a modification of the official eCos procedure.
+
+The eCos source code is designed for compilation with a GNU tool chain.
+Pre-built tool chains are available for a number of target architectures
+and we recommend that such a tool chain is used where available. Developers
+targeting one of the other architectures must build a tool chain themselves
+at present. This page details the steps required to download tool chain
+sources and build them on either a Windows host (assuming Cygwin has already
+been installed) or a Linux host. Please note that building GNU tool chains
+under Windows 95/98/ME has been found to be unreliable. We recommend that
+users avoid building the development tools on these systems if possible.
+Note also, that the instructions presented here are intended for building
+a cross tool chain for use with eCos only.
+
+Downloading source code
+-----------------------
+The GNU tool chain sources are made available for download in many component
+parts. The following parts are required for use with eCos: 
+
+•	GNU binary utilities - including the GNU assembler (as) and GNU linker (ld) 
+•	GNU compiler collection core - core GCC functionality including the C compiler (gcc) 
+•	GNU compiler collection g++ - the GCC C++ compiler (g++) 
+•	GDB - the GNU debugger 
+
+It is recommended that you use a mirror site when downloading each component. This
+will result in a faster download, reduced internet congestion and a reduced load
+on the central servers. 
+
+GNU binary utilities
+--------------------
+It is recommended that eCos is built with the most recent official release of the
+GNU binary utilities (binutils). This is available for download from the binutils
+area of the GNU FTP site or any of its mirror sites. You should download a file
+with a name of the form binutils-version.tar.bz2 (binutils-2.18 is used below).
+
+GNU compiler collection
+-----------------------
+GCC is available for download from the GCC area of the GNU FTP site or any of its
+mirror sites (GCC 4.3.2 is used below – GCC 4.3.2 does not work with DWARF exceptions).
+
+GDB
+---
+Instructions for downloading GDB are available via the GDB home page. However, a
+graphical user interface for GDB named Insight is also available. Insight has a
+separate home page. The Insight sources are a superset of the standard GDB sources
+and it is still possible to use command-line GDB after building from the Insight
+sources. We therefore recommend downloading the most recent official release of
+Insight rather than standard GDB. Both Insight and standard GDB are available for
+download from the GDB area of sources.redhat.com or any of its mirror sites. You
+should download a file with a name of the form insight-version.tar.bz2 or
+gdb-version.tar.bz2 (insight-6.8 is used below).
+The remaining instructions assume that you have downloaded the Insight tar ball.
+If you choose to download the standard GDB tar ball, please adapt the instructions
+accordingly. 
+
+Preparing the sources for building
+----------------------------------
+Once the tools sources have been downloaded, they must be prepared before building.
+These instructions assume that the tool sources will be extracted in the /src directory
+hierarchy. Other locations may be substituted throughout. Ensure that the file system
+used has sufficient free space available. The contents of each archive will expand
+to occupy approximately six times the space required by the compressed archive itself.
+To extract the downloaded sources, you will need to have both the bzip2 and gzip
+compression utilities. The patch and tar utilities are also required. All these tools
+are supplied with most Linux distributions and with Cygwin. 
+
+It is important that mounting is done in the proper way in cygwin. In cygwin you must
+check, by means of the mount command, that mounts are in text mode. Only one mount
+(/tmp) must be in bin mode. If this is not the case then the following steps will
+fail with strange errors, which are due to improper handling of cr and lf.
+
+The following steps should be followed at a bash shell prompt: 
+
+1.	Create a directory to contain the tool sources, avoiding directory names
+	containing spaces as these can confuse the build system:
+
+	mkdir -p /src
+ 
+2.	Extract the sources from each downloaded tar ball in turn (do not use
+	equivalent Windows tools, some of these does not handle cr/lf correct
+	– this will give strange errors in the following steps):
+
+	cd /src
+	bunzip2 < binutils-2.18.tar.bz2 | tar xvf -
+	bunzip2 < gcc-core-4.3.2.tar.bz2 | tar xvf -
+	bunzip2 < gcc-g++-4.3.2.tar.bz2 | tar xvf -
+	bunzip2 < insight-6.8.tar.bz2 | tar xvf – 
+
+3.	Having unpacked the tool chain tar balls, it is now necessary to apply
+	a number of official eCos patches (see the gcc_4.3.2_patch folder):
+
+	•	For gcc apply the gcc-4.3.2 patches. These patches involve among other
+		things, selection of Dwarf debug instead of Stabs,
+	•	For insight apply the insight-6.8-tcl_win_encoding.patch
+		(not the official gdb patches).
+
+4.	In case you want libstdcxx (and thread) support you need to copy the files
+	(from the gcc_4.3.2_patch folder):
+
+	o	gthr-objc-generic.c
+	o	gthr-generic.c
+	o	gthr-generic.h
+
+	to the folder /src/gcc-4.3.2/gcc.
+
+	And to apply the patch
+
+	•	gcc-4.3.2-thread.patch (see the gcc_4.3.2_patch folder)
+
+		o	Thread support.
+			Generic thread support, by means of a new gcc configures switch
+			–enable-threads=generic, is introduced to gcc.
+
+		o	Libstdcxx needs supporting functionality as required by the gcc
+			configure switches –enable-libstdcxx-allocator=malloc and
+			–enable-cstdio=stdio. To properly implement libstdcxx support,
+			libstdcxx requires knowing which functionality the target OS can
+			offer. The only possible way for eCos is to use the gcc configure
+			switch –with-newlib. This introduces the requirement for eCos to
+			be compatible with newlib (at least for the functionality used by
+			gcc). Libstdcxx uses the function strtof, which is not part of eCos.
+			The patch removes the requirement for libstdcxx to use strtof.
+			(Libstdcxx also uses the iconv library of functions in gcc 4.3.2 but
+			not in gcc 4.1.1). These functions are not part of eCos. The patch
+			removes the requirement for libstdcxx to use the iconv functions
+			(only gcc 4.3.2).  eCos has very little support for wide character
+			(wchar), therefore libstdcxx (automatically) configures itself to
+			omit most of the support for wide character.
+
+	
+	And finally to perform a reconfigure in the /src/gcc-4.3.2/gcc folder
+	(activate autoconf in the folder – this creates a new configure file in the
+	folder). Note later version of gcc (after gcc 4.3.2) requires autoconf ver.
+	2.59 to be used!
+
+	GCC thread support as implemented here is taken directly from a gcc patch
+	suggested by Joern Rennecke published on the Nabble Forums/Software/gcc/gcc
+	– patches on Mar 24, 2006.
+
+Building the toolchain
+----------------------
+Before attempting to build the tools, ensure that the GNU native compiler tools
+directory is on the PATH and precedes the current directory. The following build
+procedures will fail if . is ahead of the native tools in the PATH. 
+
+These instructions assume that the tools will be built in the /tmp/build directory
+hierarchy and installed to /gnutools. Other locations may be substituted throughout.
+The appropriate GNU architecture identifier for the intended eCos target platform
+should be substituted for the word TARGET as follows (only i386-elf has been
+tested with gcc 4.3.2[ and rudimentary with gcc 4.1.1]): 
+
+
+	Architecture						TARGET
+	ARM (including StrongARM, XScale)	arm-elf
+	Intel x86							i386-elf
+	Matsushita AM3x						mn10300-elf
+	Motorola 68K/ColdFire				m68k-elf
+	MIPS32								mipsisa32-elf
+	NEC V850							v850-elf
+	NEC VR4300							mips64vr4300-elf
+	PowerPC								powerpc-eabi
+	Renesas H8/300H						h8300-elf
+	Renesas SuperH						sh-elf
+	Toshiba TX39						mips-tx39-elf
+	Toshiba TX49						mips-tx49-elf
+
+
+The following steps should be followed at a bash shell prompt: 
+
+1.	Install eCos and make sure that ecosconfig is in your path. Set the
+	ECOS_REPOSITORY environment variable and run the following commands in an empty directory:
+
+	ecosconfig new TARGET default
+	ecosconfig add fileio
+
+2.	Change ecos.ecc to:
+
+	Cdl_option CYGPKG_LIBC_I18N_NEWLIB_CTYPE {
+	user_value 1
+	};
+
+	This is required for eCos to be compatible with the newlib implementation
+	of CTYPE, which is used explicitly by gcc.
+
+3.	Run the commands:
+
+	ecosconfig tree
+	make headers
+
+4.	Take the header tree generated under install/include and install (copy to) it in:
+	/gnutools/sysroot/usr/include.
+
+5.	Configure the GNU binary utilities:
+
+	mkdir -p /tmp/build/binutils
+	cd /tmp/build/binutils
+	/src/binutils-2.18/configure --target=TARGET \
+	--prefix=/gnutools --with-sysroot=/gnutools/sysroot \
+	-v 2>&1 | tee configure.out
+
+	If there are any problems configuring the tools, you can refer to the file
+	configure.out as a permanent record of what happened.
+
+6.	Build and install the GNU binary utilities:
+
+	make -w all install 2>&1 | tee make.out 
+
+	If there are any problems building the tools, you can refer to the file
+	make.out as a permanent record of what happened.
+
+7.	Configure GCC, ensuring that the GNU binary utilities are at the head of
+	the PATH:
+
+	[ For gcc 4.1.1: (with DWARF2 exceptions):
+	  (DWARF2 exceptions works fine with gcc 4.1.1. I have not tried
+	  SJLJ exceptions with gcc 4.1.1.)
+
+		PATH=/gnutools/bin:$PATH ; export PATH
+		mkdir -p /tmp/build/gcc
+		cd /tmp/build/gcc
+		/src/gcc-4.1.1/configure --target=TARGET \
+		--prefix=/gnutools --enable-languages=c,c++ \
+		--with-gnu-as --with-gnu-ld --with-newlib \
+		--with-gxx-include-dir=/gnutools/TARGET/include \
+		--enable-libstdcxx-allocator=malloc --enable-stdio=stdio \
+		--with-sysroot=/gnutools/sysroot \
+		-v 2>&1 | tee configure.out 
+	]
+
+	
+	For gcc 4.3.2: (with SJLJ exceptions):
+	(I could not get DWARF2 exceptions to work with gcc 4.3.2. SJLJ
+	exceptions works fine with gcc 4.3.2.)
+
+		PATH=/gnutools/bin:$PATH ; export PATH
+		mkdir -p /tmp/build/gcc
+		cd /tmp/build/gcc
+		/src/gcc-4.3.2/configure --target=TARGET \
+		--prefix=/gnutools --enable-languages=c,c++ \
+		--with-gnu-as --with-gnu-ld --with-newlib \
+		--with-gxx-include-dir=/gnutools/TARGET/include \
+		--enable-libstdcxx-allocator=malloc --enable-stdio=stdio \
+		–-disable-libgomp –disable-__cxa_atexit\
+		--with-sysroot=/gnutools/sysroot –enable-sjlj-exceptions\
+		-v 2>&1 | tee configure.out 
+
+		Libgomp is disabled since eCos does not have the required support for
+		parallel programming. __cxa_atexit is disabled since the __cxa_atexit
+		routine is not part of eCos.
+
+	In case you want thread support then you also need the switch:
+
+		--enable-threads=generic
+
+	on the configure command line.
+
+	NOTE: for the i386-elf target two additional switches on the configure command line
+	are needed:
+
+	•	--disable-libssp
+		The Stack Smashing Protection routines are therefore not included in gcc.
+	•	--disable-shared
+		Required because gcc assumes “shared” is the default, which it is not for
+		embedded targets. This automatically disables “mudflap”. The memory
+		protection functions in “mudflap” are therefore not included in gcc.
+
+8.	Build and install GCC:
+
+	make -w all install 2>&1 | tee make.out 
+
+
+	[ DWARF2 exceptions only: 
+	  Before building the eCos library with the new compiler, there are a few updates
+	  of eCos to be done. Script files for linking must include new sections defined
+	  by the new compiler. For an example see
+	  eCos/packages/hal/i386/arch/current/src/i386.ld.dwarf2 and
+	  eCos/packages/hal/i386/pc/current/include/pkgconf/*.ldi.dwarf2 in the
+	  folder eCosCor.
+	]
+
+	The new compiler is stricter with keywords.
+	In the file eCos/packages/language/c/libm/current/include/math.h, use of the keyword
+	“exception” must be changed. See math.h in the folder eCosCor for an example of how
+	to do this.
+
+9.	Configure Insight:
+
+	mkdir -p /tmp/build/gdb
+	cd /tmp/build/gdb
+	/src/insight-6.8/configure --target=TARGET \
+	--prefix=/gnutools -v 2>&1 | tee configure.out 
+
+10.	Build and install Insight:
+
+	make -w all install 2>&1 | tee make.out 
+
+
+Following successful building and installation of each set of tools,
+the associated build tree may be deleted to save space if necessary.
+The toolchain executable files will be located at /gnutools/bin. This
+directory should be added to the head of your PATH. 
+
+	
+
+eCos libstdcxx Compatibility
+----------------------------
+eCos libstdcxx compatibility is implemented in the epk package
+gcc_ecos_multithread-1.0.epk (see the gcc_ecos_multithread folder).
+
+It is assumed by the package that gcc is built with the configuration switches
+--enable-threads=generic, --enable-libstdcxx-allocator=malloc and
+--enable-cstdio=stdio.
+
+Dynamic memory allocation and libc must be initialized before exceptions and other
+libstdcxx functionality are used. This is due to the way gcc is built
+(with --enable-libstdcxx-allocator=malloc and --enable-cstdio=stdio).
+
+[ DWARF2 exceptions only:
+  To support exception handling it is required that __register_frame_info is called.
+  __register_frame_info should be called before any c++ file level constructors using
+  exception handling (try/catch) are activated. Likewise __deregister_frame_info
+  should be called after all file level destructors using exception handling
+  (try/catch) have been activated (when exiting - this is not really relevant for eCos).
+  This is accomplished in the package by wrapping up the calls of the two routines
+  in a c++ class, and declaring an instantiation of the class at file level with a
+  priority number a little higher than the CYG_INIT_LIBC priority number
+  (higher number means lower priority). This means that class instantiations at file
+  level with priority numbers higher than this can use exception handling and other
+  libstdcxx functionality in their constructors.
+  Support of DWARF2 exception handling has been def'ed out in the source.
+]
+
+The functionality of supporting thread routines for native eCos threads are heavily
+inspired by eCos pthread routines.
+
+It is not allowed to use cyg_thread_kill. Threads must exit voluntarily.
+There is a maximum for the number of keys that can be used and there is a maximum
+for the number of threads, which can use the support. These figures are configuration
+dependant (in gcc_ecos_multithread-1.0.epk).
+
+When the eCos libraries are built, you may link your application. Remember to append
+–lstdc++ to the end of the link line e.g.:
+
+$(NAME).exe: $(OBJECTS)
+	$(LINKER) -Wl,-static,--gc-sections,-Map,$@.map --print-map $(LINKER_FLAGS)
+	-nostartfiles -nostdlib $(OBJECTS) -Ttarget.ld $(LIBS) -lstdc++ -o $@
+
+
+Regarding code size, you might consider disabling the verbose terminate handler by
+defining this function in your application code:
+
+#include <cstdlib>
+#include <exception>
+namespace __gnu_cxx
+{
+	void __verbose_terminate_handler()
+	{
+		abort();
+	};
+}
+
+
+For other eCos corrections see the eCosCor folder.

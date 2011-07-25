@@ -1,0 +1,93 @@
+diff -u -r gcc-4.3.2.orig/gcc/Makefile.in gcc-4.3.2/gcc/Makefile.in
+--- gcc-4.3.2.orig/gcc/Makefile.in	2008-08-01 11:51:03.000000000 +0200
++++ gcc-4.3.2/gcc/Makefile.in	2008-10-09 14:08:54.283521900 +0200
+@@ -1571,7 +1571,7 @@
+ #
+ # Build libgcc.a.
+ 
+-LIB2ADD = $(LIB2FUNCS_EXTRA)
++LIB2ADD = $(LIB2FUNCS_EXTRA) @extra_libgcc_srcs@
+ LIB2ADD_ST = $(LIB2FUNCS_STATIC_EXTRA)
+ 
+ # All source files for libgcc are either in the source directory (in
+diff -u -r gcc-4.3.2.orig/gcc/configure.ac gcc-4.3.2/gcc/configure.ac
+--- gcc-4.3.2.orig/gcc/configure.ac	2008-08-01 11:51:03.000000000 +0200
++++ gcc-4.3.2/gcc/configure.ac	2008-10-09 16:01:50.424521900 +0200
+@@ -1370,7 +1370,7 @@
+     target_thread_file='single'
+     ;;
+   aix | dce | gnat | irix | posix | posix95 | rtems | \
+-  single | solaris | vxworks | win32 | mipssde)
++  single | solaris | vxworks | win32 | mipssde | generic)
+     target_thread_file=${enable_threads}
+     ;;
+   *)
+@@ -1391,6 +1391,14 @@
+   rm -f gthr-default.h
+   echo "#include \"gthr-${thread_file}.h\"" > gthr-default.h
+   gthread_flags=-DHAVE_GTHR_DEFAULT
++  if test $thread_file != posix; then
++    if test -f $srcdir/gthr-${thread_file}.c; then
++      extra_libgcc_srcs=$srcdir/gthr-${thread_file}.c
++    fi
++    if test -f $srcdir/gthr-objc-${thread_file}.c; then
++      extra_libgcc_srcs="${extra_libgcc_srcs} $srcdir/gthr-objc-${thread_file}.c"
++    fi
++  fi
+ fi
+ AC_SUBST(gthread_flags)
+ 
+@@ -3770,6 +3778,7 @@
+ AC_SUBST(tmake_file)
+ AC_SUBST(extra_gcc_objs)
+ AC_SUBST(extra_headers_list)
++AC_SUBST(extra_libgcc_srcs)
+ AC_SUBST(extra_objs)
+ AC_SUBST(extra_parts)
+ AC_SUBST(extra_passes)
+diff -u -r gcc-4.3.2.orig/gcc/doc/install.texi gcc-4.3.2/gcc/doc/install.texi
+--- gcc-4.3.2.orig/gcc/doc/install.texi	2008-06-19 07:59:30.000000000 +0200
++++ gcc-4.3.2/gcc/doc/install.texi	2008-10-09 16:12:58.842521900 +0200
+@@ -992,6 +992,21 @@
+ AIX thread support.
+ @item dce
+ DCE thread support.
++@item generic
++Generic thread support.  All the thread interface primitives used by the
++libgcc/libobjc/libstdc++ will be provided as out-of-line weak stub functions
++with the same functionality as you get with @option{--enable-threads=single}.
++This is useful when you want to build a toolchain that has, and can be
++used to compile, thread-agnostic libraries, so that a single toolchain
++can support multiple OS environments for the same processor.
++Without adding further object files / libraries, this toolchain can
++compile and link objects that can run on a target without a threading
++system.
++You can also support a threaded environment by linking in an additional
++object / library which replaces some or all of the functions defined in
++@file{gthr-generic.c} / @file{gthr-objc-generic.c} with functions that
++match the intended target environment.  The data type definitions are
++at the start of @file{gthr-generic.h}.
+ @item gnat
+ Ada tasking support.  For non-Ada programs, this setting is equivalent
+ to @samp{single}.  When used in conjunction with the Ada run time, it
+diff -u -r gcc-4.3.2.orig/libstdc++-v3/configure gcc-4.3.2/libstdc++-v3/configure
+--- gcc-4.3.2.orig/libstdc++-v3/configure	2008-10-09 14:26:14.962521900 +0200
++++ gcc-4.3.2/libstdc++-v3/configure	2008-10-10 11:54:21.831532200 +0200
+@@ -41795,7 +41795,7 @@
+ 
+     # GLIBCXX_CHECK_STDLIB_SUPPORT
+     cat >>confdefs.h <<\_ACEOF
+-#define HAVE_STRTOF 1
++# #define HAVE_STRTOF 1
+ _ACEOF
+ 
+     # AC_FUNC_MMAP
+@@ -41911,7 +41911,7 @@
+ 
+ 
+     cat >>confdefs.h <<\_ACEOF
+-#define HAVE_ICONV 1
++# #define HAVE_ICONV 1
+ _ACEOF
+ 
+   else

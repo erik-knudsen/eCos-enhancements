@@ -1,0 +1,133 @@
+SQLite 3.5.1 has been ported to eCos. Compile with the following defines:
+
+* SQLITE_OMIT_LOAD_EXTENSION
+eCos has no support for load extension.
+
+* SQLITE_HOMEGROWN_RECURSIVE_MUTEX
+eCos has no implementation of recursive mutexes. We therefore use the
+SQLITE implementation.
+
+* SQLITE_DISABLE_LFS
+Large File Support (files bigger than 2 GB) is not available in eCos.
+
+* SQLITE_DISABLE_DIRSYNC
+Directory files cannot be read/written in eCos. The SQLITE implementation
+of directory synchronization can therefore not be used. This is only a problem
+when files are deleted by SQLITE. For the rollback journal file, which poses
+the biggest problem with this, the problem can be circumvented by not allowing
+SQLITE to delete the rollback journal file (use the pragma journal_mode=PERSIST).
+
+* SQLITE_ENABLE_LOCKING_STYLE=1
+The appropriate locking style is selected based on the file system where the
+database is located. For eCos it must use the same style as VXWorks (named
+POSIX semaphores).
+
+* OS_VXWORKS=1
+With regards to SQLITE, eCos is compatible with VXWorks.
+
+
+It has been necessary to change a few things in the SQLite sources:
+
+* In the files pragma.c (1369 - 1392 -1394, attach.c (152), os_unix.c (3720)
+#if has been changed to #ifdef in a few places. New compilers are strict with
+syntax.
+
+* In the file os_unix.c ENOLCK (file record locking, 373) and ESTALE
+(Network File System - 410) has been #ifdef’ed out. They do not exist in eCos.
+
+* eCos uses the VXWORKS implementation of SQLITE. In os_unix.c, when
+SQLITE_ENABLE_LOCKING_STYLE is enable the flock methods must not be included
+when OS_VXWORKS is enabled (3196 - 5071).
+
+* Also in os-unix.c, a few things have been corrected with regards to
+SQLITE_DISABLE_DIRSYNC (3471/3501 – 3619/3622 – 3658/3658 – 3706/3713).
+
+
+A few corrections to the eCos source files have also been done:
+
+* eCos has been updated to support named POSIX semaphores. This is required
+for SQLITE to work with the OS_VXWORKS define. The files
+packages/compat/posix/current/cdl/posix.cdl,
+packages/compat/posix/current/src/sem.cxx,
+packages/compat/posix/current/tests/pnmsem.c have been updated.
+
+*  The i386 hal has been updated to support choice between  PCI IDE and ISA IDE.
+o The file packages/hal/i386/pcmb/current/include/pcmb_io.h has been updated.
+o The file packages/hal/i386/pcmb/current/src/pcmb_io.c has been added.
+o The file packages/hal/i386/pcmb/cdl/hal_i386_pcmb.cdl has been updated.
+
+* The FAT file system has been updated to support lseek for positions greater than
+eof for the file. This is a standard feature of lseek, but has not been supported
+in the eCos implementation of the FAT file system. This feature is required by SQLITE.
+o The file packages/fs/fat/current/src/fatfs.c has been updated.
+
+Two pragmas for SQLITE must be used:
+
+* PRAGMA temp_store_directory must set the directory for temporary files to an
+absolute path. SQLITE uses this directory for the statement journal file, which is
+always stored in the file system. The VXWORKS implementation of SQLITE requires the
+path to be absolute.
+
+* PRAGMA journal_mode=PERSIST must be used to not require the journal file to be
+deleted.
+
+Finally there is no support for ftruncate in eCos and it is very difficult to
+make that in a general way:
+
+•	Instead define the following function in the application code.
+
+	#include <cyg/infra/cyg_type.h>
+	#include <sys/types.h>
+	__externC int ftruncate(int fd, off_t length)
+	{
+		return 0;
+	}
+
+The database file will then never be truncated.
+
+
+In case you use an underlying file system which does not have support for long
+filenames, which is the case for the FAT file system implementation in the open
+source eCos (eCosPro delivered by eCosCentric does have support for long file
+names in their implementation of the FAT file system), then there are a few more
+things to be aware of:
+
+There are additional defines for the compiler:
+
+* SQLITE_TEMP_STORE=3
+The eCos implementation of the FAT file system does only have support for 8.3
+filenames (no long filenames).  The names of temporary SQLITE files are
+automatically generated and do not follow the 8.3 filename scheme. This define
+allocates all temporary SQLITE files in memory instead of in the file system.
+
+* SQLITE_TEMP_FILE_PREFIX=’”s”’
+The statement journal file is always stored in the file system. This assures
+together with the following corrections that the 8.3 filename requirements are
+met for the statement journal file.
+
+
+And there are additional corrections to source files:
+
+* In the file pager.c on line 3203 “-journal”, 8 has been changed to “jr”, 2.
+This has been done to make SQLite compatible with the eCos implementation of the
+FAT file system. eCos has only support for 8.3 filenames. This takes care of the
+rollback journal file name. The rollback journal file is always stored in the
+file system.
+
+* In the file os_unix.c (in the function getTempname) it is assured that the
+temporary filename does not exceed 8 characters. This is to take care of the
+statement journal file, which is always stored in the file system. It is used
+to rollback partial results of a single statement within a larger transaction.
+
+There is also a Master journal file, which is always stored in the file system,
+but it is only used with multiple databases, so don’t use multiple databases.
+It is also possible to create temporary databases with SQLITE, but file naming
+does not follow the 8.3 scheme, so don’t use temporary databases.
+
+And there is a requirement to the name of the database file:
+
+* The name of the database file must follow an 8.1 scheme e.g. database.b.
+The name of the rollback journal file will in this case be database.bjr.
+
+
+For eCos corrections se the eCosCor folder.

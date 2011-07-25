@@ -1,0 +1,9 @@
+
+package CYGPKG_LIBSTDCXX {
+	alias 		{ "libstdcxx support" libstdcxx }
+	directory	services/libstdcxx
+	script		libstdcxx.cdl
+        description "
+           This package contains support for libstdcxx."
+}
+
