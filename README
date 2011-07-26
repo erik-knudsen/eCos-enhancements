@@ -1,0 +1,15 @@
+This repository has a number of enhancements to the eCos operating system:
+
+	1. Port of Spidermonkey version 1.7.0 to eCos.
+	   Spidermonkey is a JavaScript engine.
+	
+	2. Port of SQLite version 3.5.1 to eCos.
+	   SQLite is an SQL database engine. Most of the functionality of SQLite is ported.
+	   
+	3. Update of the gcc compiler officially supported (version 4.3.2) for compiling eCos. The compiler
+	   is updated to support multithreading (libstdcxx etc.).
+	
+	4. Updates of eCos to support the above listed enhancements.
+	
+The enhancements are organized in independent subdirectories in the repository. Each subdirectory has its
+own README files that further describes the enhancement.
